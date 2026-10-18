@@ -2,6 +2,8 @@ package com.vishesh.foodcatalog.catalog.application;
 
 import java.util.Locale;
 
+import org.springframework.stereotype.Service;
+
 import com.vishesh.foodcatalog.catalog.domain.RestaurantChain;
 import com.vishesh.foodcatalog.catalog.repository.RestaurantChainRepository;
 
@@ -10,6 +12,7 @@ import com.vishesh.foodcatalog.catalog.repository.RestaurantChainRepository;
  * It cleans the input, checks uniqueness, creates the domain object,
  * and asks the repository to save it.
  */
+@Service
 public class RestaurantChainService {
     private final RestaurantChainRepository repository;
 
