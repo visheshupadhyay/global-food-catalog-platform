@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.vishesh.foodcatalog.catalog.application.DuplicateBusinessCodeException;
+import com.vishesh.foodcatalog.catalog.application.RestaurantChainNotFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -49,6 +50,20 @@ public class CatalogExceptionHandler {
 
         // The service uses this exception when a business argument is invalid.
         int status = HttpStatus.BAD_REQUEST.value();
+        String message = exception.getMessage();
+        String path = servletRequest.getRequestURI();
+
+        ApiError apiError = new ApiError(status, message, path);
+        return ResponseEntity.status(status).body(apiError);
+    }
+
+    @ExceptionHandler(RestaurantChainNotFoundException.class)
+    public ResponseEntity<ApiError> handleRestaurantChainNotFound(
+            RestaurantChainNotFoundException exception,
+            HttpServletRequest servletRequest) {
+
+        // The requested restaurant chain does not exist, so the API returns 404.
+        int status = HttpStatus.NOT_FOUND.value();
         String message = exception.getMessage();
         String path = servletRequest.getRequestURI();
 

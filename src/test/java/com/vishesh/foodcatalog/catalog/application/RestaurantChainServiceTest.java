@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.Locale;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -117,7 +118,7 @@ public class RestaurantChainServiceTest {
         verifyNoInteractions(repository);
     }
 
-    @Test 
+    @Test
     void createChain_normalizesMixedCaseBusinessCode() {
         String businessCode = " berLin-Chain-100 ";
         String displayName = "Berlin Burgers";
@@ -139,7 +140,7 @@ public class RestaurantChainServiceTest {
         assertEquals(ChainStatus.DRAFT, savedChain.getStatus());
     }
 
-    @Test 
+    @Test
     void createChain_normalizesLowercaseBusinessCode() {
         String businessCode = " berlin-chain-100 ";
         String displayName = "Berlin Burgers";
@@ -161,8 +162,7 @@ public class RestaurantChainServiceTest {
         assertEquals(ChainStatus.DRAFT, savedChain.getStatus());
     }
 
-
-    @Test 
+    @Test
     void createChain_rejectsDuplicateAfterBusinessCodeNormalization() {
         String businessCode = " berlin-chain-100 ";
         String displayName = "Berlin Burgers";
@@ -173,7 +173,7 @@ public class RestaurantChainServiceTest {
 
         service.createChain(businessCode, displayName);
         when(repository.existsByBusinessCode(businessCode.trim().toUpperCase(Locale.ROOT))).thenReturn(true);
-        assertThrows(DuplicateBusinessCodeException.class, ()-> service.createChain(businessCode, displayName));
+        assertThrows(DuplicateBusinessCodeException.class, () -> service.createChain(businessCode, displayName));
         ArgumentCaptor<RestaurantChain> captor = ArgumentCaptor.forClass(RestaurantChain.class);
 
         verify(repository).save(captor.capture());
@@ -185,4 +185,82 @@ public class RestaurantChainServiceTest {
         assertEquals(ChainStatus.DRAFT, savedChain.getStatus());
         verify(repository).save(any(RestaurantChain.class));
     }
+
+    @Test
+    void findById_returnsChainWhenRepositoryFindsIt() {
+        RestaurantChain persistedChain = persistedChain(42L, "DH-DE", "Delivery Hero Germany");
+        when(repository.findById(42L)).thenReturn(Optional.of(persistedChain));
+
+        RestaurantChain result = service.findChainById(42L);
+
+        assertEquals(persistedChain, result);
+        verify(repository).findById(42L);
+    }
+
+    @Test
+    void findById_throwsNotFoundWhenRepositoryIsEmpty() {
+        when(repository.findById(42L)).thenReturn(Optional.empty());
+
+        RestaurantChainNotFoundException exception = assertThrows(RestaurantChainNotFoundException.class,
+                () -> service.findChainById(42L));
+        assertEquals("Restaurant chain with ID: 42 not found", exception.getMessage());
+        verify(repository).findById(42L);
+    }
+
+    @Test
+    void findByBusinessCode_normalizesLowercaseInput() {
+        RestaurantChain persistedChain = persistedChain(42L, "DH-DE", "Delivery Hero Germany");
+        when(repository.findByBusinessCode("DH-DE")).thenReturn(Optional.of(persistedChain));
+
+        RestaurantChain result = service.findChainByBusinessCode(" dh-de ");
+
+        assertEquals(persistedChain, result);
+        verify(repository).findByBusinessCode("DH-DE");
+    }
+
+    @Test
+    void findByBusinessCode_returnsChainWhenRepositoryFindsIt() {
+        RestaurantChain persistedChain = persistedChain(42L, "DH-DE", "Delivery Hero Germany");
+        when(repository.findByBusinessCode("DH-DE")).thenReturn(Optional.of(persistedChain));
+
+        RestaurantChain result = service.findChainByBusinessCode("DH-DE");
+
+        assertEquals(persistedChain, result);
+        verify(repository).findByBusinessCode("DH-DE");
+    }
+
+    @Test
+    void findByBusinessCode_throwsNotFoundWhenRepositoryIsEmpty() {
+        when(repository.findByBusinessCode("DH-DE")).thenReturn(Optional.empty());
+
+        assertThrows(RestaurantChainNotFoundException.class,
+                () -> service.findChainByBusinessCode("DH-DE"));
+        verify(repository).findByBusinessCode("DH-DE");
+    }
+
+    @Test
+    void findById_rejectsInvalidId() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.findChainById(0L));
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void findByBusinessCode_rejectsBlankBusinessCode() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.findChainByBusinessCode("  "));
+        verifyNoInteractions(repository);
+    }
+
+    private RestaurantChain persistedChain(Long id, String businessCode, String displayName) {
+        return new RestaurantChain(
+                businessCode,
+                displayName,
+                ChainStatus.DRAFT,
+                java.time.Instant.parse("2026-01-01T00:00:00Z"),
+                java.time.Instant.parse("2026-01-01T00:00:00Z"),
+                id);
+    }
+
+
 }
