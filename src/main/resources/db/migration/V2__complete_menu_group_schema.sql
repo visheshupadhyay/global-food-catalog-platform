@@ -1,0 +1,18 @@
+ALTER TABLE menu_group
+    ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+    ADD COLUMN created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE outlet
+    ADD COLUMN currency CHAR(3);
+
+UPDATE outlet
+SET currency = 'EUR'
+WHERE currency IS NULL;
+
+ALTER TABLE outlet
+    ALTER COLUMN currency SET NOT NULL;
+
+ALTER TABLE outlet
+    ADD CONSTRAINT outlet_currency_format_ck
+    CHECK (currency ~ '^[A-Z]{3}$');
