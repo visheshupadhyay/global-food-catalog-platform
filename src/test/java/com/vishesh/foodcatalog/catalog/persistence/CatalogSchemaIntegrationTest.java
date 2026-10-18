@@ -1,9 +1,12 @@
 package com.vishesh.foodcatalog.catalog.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -15,6 +18,9 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.vishesh.foodcatalog.TestcontainersConfiguration;
+import com.vishesh.foodcatalog.catalog.domain.ChainStatus;
+import com.vishesh.foodcatalog.catalog.domain.RestaurantChain;
+import com.vishesh.foodcatalog.catalog.persistence.adapter.RestaurantChainPersistenceAdapter;
 
 /**
  * Proves that a real PostgreSQL database can be built by the Flyway migrations.
@@ -28,6 +34,9 @@ class CatalogSchemaIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     private String insertedBusinessCode;
+
+    @Autowired
+    private RestaurantChainPersistenceAdapter persistenceAdapter;
 
     @AfterEach
     void cleanUp() {
@@ -67,18 +76,59 @@ class CatalogSchemaIntegrationTest {
 
     @Test
     void postgresRejectsDuplicateRestaurantChainBusinessCode() {
-        // PostgreSQL must protect the uniqueness rule even if application code misses it.
+        // PostgreSQL must protect the uniqueness rule even if application code misses
+        // it.
         insertedBusinessCode = "SCHEMA-TEST-" + UUID.randomUUID();
 
         jdbcTemplate.update(
                 "insert into restaurant_chain (display_name, business_code) values (?, ?)",
                 "Schema Test Chain", insertedBusinessCode);
 
-        DataAccessException exception = assertThrows(DataAccessException.class, () ->
-                jdbcTemplate.update(
-                        "insert into restaurant_chain (display_name, business_code) values (?, ?)",
-                        "Duplicate Schema Test Chain", insertedBusinessCode));
+        DataAccessException exception = assertThrows(DataAccessException.class, () -> jdbcTemplate.update(
+                "insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "Duplicate Schema Test Chain", insertedBusinessCode));
 
         assertTrue(exception.getMessage().contains("restaurant_chain_business_code_uk"));
+    }
+
+    @Test
+    void restaurantChainRoundTripsThroughPostgres() {
+        String businessCode = "INTEGRATION-DE";
+        String displayName = "Integration Germany";
+        insertedBusinessCode = businessCode;
+        RestaurantChain savedRestaurantChain = persistenceAdapter.save(
+                new RestaurantChain(businessCode, displayName));
+
+        assertNotNull(savedRestaurantChain.getId());
+        assertTrue(savedRestaurantChain.getId() > 0);
+
+        Optional<RestaurantChain> restaurantChainById = persistenceAdapter.findById(savedRestaurantChain.getId());
+        assertFalse(restaurantChainById.isEmpty());
+        assertNotNull(restaurantChainById.get().getCreatedAt());
+        assertNotNull(restaurantChainById.get().getUpdatedAt());
+        assertEquals(displayName, restaurantChainById.get().getDisplayName());
+        assertEquals(businessCode, restaurantChainById.get().getBusinessCode());
+        assertNotNull(restaurantChainById.get().getId());
+        assertEquals(ChainStatus.DRAFT, restaurantChainById.get().getStatus());
+
+        Optional<RestaurantChain> restaurantChainByCode = persistenceAdapter.findByBusinessCode("INTEGRATION-DE");
+
+        assertFalse(restaurantChainByCode.isEmpty());
+        assertNotNull(restaurantChainByCode.get().getCreatedAt());
+        assertNotNull(restaurantChainByCode.get().getUpdatedAt());
+        assertEquals(displayName, restaurantChainByCode.get().getDisplayName());
+        assertEquals(businessCode, restaurantChainByCode.get().getBusinessCode());
+        assertNotNull(restaurantChainByCode.get().getId());
+        assertEquals(ChainStatus.DRAFT, restaurantChainByCode.get().getStatus());
+    }
+
+    @Test
+    void findById_returnsEmptyWhenChainDoesNotExist() {
+        assertTrue(persistenceAdapter.findById(999999999L).isEmpty());
+    }
+
+    @Test
+    void findByBusinessCode_returnsEmptyWhenChainDoesNotExist(){
+        assertTrue(persistenceAdapter.findByBusinessCode("DOES-NOT-EXIST").isEmpty());
     }
 }

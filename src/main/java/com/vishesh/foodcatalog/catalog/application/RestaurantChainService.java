@@ -1,6 +1,7 @@
 package com.vishesh.foodcatalog.catalog.application;
 
 import java.util.Locale;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
@@ -43,4 +44,34 @@ public class RestaurantChainService {
         return repository.save(newRestaurantChain);
     }
 
+    public RestaurantChain findChainById(Long id) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("Restaurant chain ID must be greater than zero");
+        }
+        Optional<RestaurantChain> restaurantChain = repository.findById(id);
+
+        if (restaurantChain.isEmpty()) {
+            throw new RestaurantChainNotFoundException("Restaurant chain with ID: " + id + " not found");
+        }
+        return restaurantChain.get();
+    }
+
+    public RestaurantChain findChainByBusinessCode(String businessCode) {
+        if (businessCode == null) {
+            throw new IllegalArgumentException("Value cannot be null");
+        }
+        businessCode = businessCode.trim();
+        businessCode = businessCode.toUpperCase(Locale.ROOT);
+
+        if (businessCode.isEmpty()) {
+            throw new IllegalArgumentException("Value cannot be blank");
+        }
+
+        Optional<RestaurantChain> restaurantChain = repository.findByBusinessCode(businessCode);
+
+        if (restaurantChain.isEmpty()) {
+            throw new RestaurantChainNotFoundException("Restaurant chain with business code: " + businessCode + " not found");
+        }
+        return restaurantChain.get();
+    }
 }
