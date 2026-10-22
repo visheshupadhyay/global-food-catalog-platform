@@ -14,6 +14,7 @@ import com.vishesh.foodcatalog.catalog.repository.RestaurantChainRepository;
  * Connects the business repository to the database repository.
  * It translates domain objects to database objects and translates them back.
  */
+/** Converts chain objects and sends them to the chain database repository. */
 @Repository 
 public class RestaurantChainPersistenceAdapter implements RestaurantChainRepository {
     private final RestaurantChainJpaRepository repository;

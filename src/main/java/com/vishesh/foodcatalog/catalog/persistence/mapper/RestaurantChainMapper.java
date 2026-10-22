@@ -9,6 +9,7 @@ import com.vishesh.foodcatalog.catalog.persistence.entity.RestaurantChainEntity;
  * Converts between the business object and the database object.
  * The domain object protects business rules; the entity is shaped for JPA.
  */
+/** Translates between business objects and database objects for chains. */
 @Component 
 public class RestaurantChainMapper {
 
