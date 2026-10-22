@@ -1,0 +1,2 @@
+ALTER TABLE menu_group
+    ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
