@@ -154,7 +154,7 @@ class MenuGroupControllerMvcTest {
 
     @Test
     void missingId_returns404() throws Exception {
-        when(service.findMenuGroupById(anyLong(),anyLong()))
+        when(service.findMenuGroupById(anyLong(), anyLong()))
                 .thenThrow(new MenuGroupNotFoundException("Menu group with ID: 901 not found"));
 
         mockMvc.perform(get("/api/v1/restaurant-chains/101/menu-groups/" + 901))
@@ -173,7 +173,7 @@ class MenuGroupControllerMvcTest {
                 "Burgers");
 
         when(service.findMenuGroupById(101L, 42L)).thenReturn(menuGroup);
-        when(service.findMenuGroupById(201L,42L))
+        when(service.findMenuGroupById(201L, 42L))
                 .thenThrow(new MenuGroupNotFoundException("Menu group with ID: 42 not found"));
 
         mockMvc.perform(get("/api/v1/restaurant-chains/201/menu-groups/" + 42))
@@ -188,6 +188,6 @@ class MenuGroupControllerMvcTest {
     private MenuGroup persistedMenuGroup(Long id, Long restaurantChainId, String displayName) {
         Instant timestamp = Instant.parse("2026-01-01T00:00:00Z");
         return new MenuGroup(restaurantChainId, displayName,
-                ChainStatus.DRAFT, timestamp, timestamp, 3L,id);
+                ChainStatus.DRAFT, timestamp, timestamp, 3L, id);
     }
 }

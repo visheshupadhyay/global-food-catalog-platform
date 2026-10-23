@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
-import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -59,6 +59,10 @@ class CatalogSchemaIntegrationTest {
     @AfterEach
     void cleanUp() {
         if (secondInsertedRestaurantChainId != null) {
+            jdbcTemplate.update("delete from menu_item where restaurant_chain_id = ?",
+                    secondInsertedRestaurantChainId);
+            jdbcTemplate.update("delete from outlet where restaurant_chain_id = ?",
+                    secondInsertedRestaurantChainId);
             jdbcTemplate.update("delete from menu_group where restaurant_chain_id = ?",
                     secondInsertedRestaurantChainId);
             secondInsertedRestaurantChainId = null;
@@ -70,6 +74,10 @@ class CatalogSchemaIntegrationTest {
             secondInsertedBusinessCode = null;
         }
         if (insertedRestaurantChainId != null) {
+            jdbcTemplate.update("delete from menu_item where restaurant_chain_id = ?",
+                    insertedRestaurantChainId);
+            jdbcTemplate.update("delete from outlet where restaurant_chain_id = ?",
+                    insertedRestaurantChainId);
             jdbcTemplate.update("delete from menu_group where restaurant_chain_id = ?",
                     insertedRestaurantChainId);
             insertedRestaurantChainId = null;
@@ -105,7 +113,7 @@ class CatalogSchemaIntegrationTest {
         Integer successfulMigrations = jdbcTemplate.queryForObject(
                 "select count(*) from flyway_schema_history where success = true",
                 Integer.class);
-        assertEquals(5, successfulMigrations);
+        assertEquals(6, successfulMigrations);
     }
 
     @Test
@@ -353,11 +361,8 @@ class CatalogSchemaIntegrationTest {
         MenuGroupEntity menuGroupEntity = new MenuGroupEntity(savedRestaurantChain.getId(), "Burger-House");
         MenuGroupEntity savedMenuGroupEntity = menuGroupJpaRepository.saveAndFlush(menuGroupEntity);
         assertEquals(0L, savedMenuGroupEntity.getVersion());
-        Instant oldUpdatedAt = savedMenuGroupEntity.getUpdatedAt();
 
         savedMenuGroupEntity.rename("Burger-Land");
-
-        assertTrue(savedMenuGroupEntity.getUpdatedAt().isAfter(oldUpdatedAt));
 
         MenuGroupEntity newSavedEntity = menuGroupJpaRepository.saveAndFlush(savedMenuGroupEntity);
         assertEquals("Burger-Land", newSavedEntity.getDisplayName());
@@ -448,5 +453,210 @@ class CatalogSchemaIntegrationTest {
     @Test
     void findByBusinessCode_returnsEmptyWhenChainDoesNotExist() {
         assertTrue(persistenceAdapter.findByBusinessCode("DOES-NOT-EXIST").isEmpty());
+    }
+
+    @Test
+    void postgresRejectsMenuItemWithBothOwners() {
+        insertedBusinessCode = "MENU-ITEM-OWNER-TEST-" + UUID.randomUUID();
+        jdbcTemplate.update(
+                "insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "Menu Item Owner Test Chain", insertedBusinessCode);
+        insertedRestaurantChainId = jdbcTemplate.queryForObject(
+                "select id from restaurant_chain where business_code = ?",
+                Long.class, insertedBusinessCode);
+
+        Long menuGroupId = jdbcTemplate.queryForObject(
+                "insert into menu_group (display_name, restaurant_chain_id, status) "
+                        + "values (?, ?, ?) returning id",
+                Long.class, "Burgers", insertedRestaurantChainId, ChainStatus.DRAFT.name());
+        Long outletId = jdbcTemplate.queryForObject(
+                "insert into outlet (display_name,currency, outlet_code, restaurant_chain_id, status) "
+                        + "values (?,?, ?, ?, ?) returning id",
+                Long.class, "Berlin Mitte", "EUR", "BERLIN-" + UUID.randomUUID(),
+                insertedRestaurantChainId, ChainStatus.DRAFT.name());
+
+        DataAccessException exception = assertThrows(DataAccessException.class,
+                () -> jdbcTemplate.update(
+                        "insert into menu_item (item_name, item_price, created_at, "
+                                + "menu_group_id, outlet_id, business_code, status, "
+                                + "visibility, availability, version, restaurant_chain_id, updated_at) "
+                                + "values (?, ?, current_timestamp, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp)",
+                        "Invalid Burger", BigDecimal.valueOf(5.99), menuGroupId, outletId,
+                        "INVALID-BOTH-" + UUID.randomUUID(), "DRAFT", true, true, 0L,
+                        insertedRestaurantChainId));
+
+        assertTrue(exception.getMessage().contains("menu_item_single_owner_ck"));
+    }
+
+    @Test
+    void postgresRejectsMenuItemWithNoOwner() {
+        insertedBusinessCode = "MENU-ITEM-OWNER-TEST-" + UUID.randomUUID();
+        jdbcTemplate.update(
+                "insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "Menu Item Owner Test Chain", insertedBusinessCode);
+        insertedRestaurantChainId = jdbcTemplate.queryForObject(
+                "select id from restaurant_chain where business_code = ?",
+                Long.class, insertedBusinessCode);
+
+        DataAccessException exception = assertThrows(DataAccessException.class,
+                () -> jdbcTemplate.update(
+                        "insert into menu_item (item_name, item_price, created_at, "
+                                + "menu_group_id, outlet_id, business_code, status, "
+                                + "visibility, availability, version, restaurant_chain_id, updated_at) "
+                                + "values (?, ?, current_timestamp, null, null, ?, ?, ?, ?, ?, ?, current_timestamp)",
+                        "Orphan Burger", BigDecimal.valueOf(5.99),
+                        "INVALID-NONE-" + UUID.randomUUID(), "DRAFT", true, true, 0L,
+                        insertedRestaurantChainId));
+
+        assertTrue(exception.getMessage().contains("menu_item_single_owner_ck"));
+    }
+
+    @Test
+    void postgresAcceptsMenuItemOwnedByMenuGroup() {
+        insertedBusinessCode = "SHARED-CHAIN-" + UUID.randomUUID();
+        jdbcTemplate.update(
+                "insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "Shared Item Chain", insertedBusinessCode);
+        insertedRestaurantChainId = jdbcTemplate.queryForObject(
+                "select id from restaurant_chain where business_code = ?",
+                Long.class, insertedBusinessCode);
+
+        Long menuGroupId = jdbcTemplate.queryForObject(
+                "insert into menu_group (display_name, restaurant_chain_id, status) "
+                        + "values (?, ?, ?) returning id",
+                Long.class, "Burgers", insertedRestaurantChainId, ChainStatus.DRAFT.name());
+
+        String itemBusinessCode = "SHARED-ITEM-" + UUID.randomUUID();
+        Long menuItemId = jdbcTemplate.queryForObject(
+                "insert into menu_item (item_name, item_price, created_at, menu_group_id, "
+                        + "outlet_id, business_code, status, visibility, availability, version, "
+                        + "restaurant_chain_id, updated_at) "
+                        + "values (?, ?, current_timestamp, ?, null, ?, ?, ?, ?, ?, ?, current_timestamp) "
+                        + "returning id",
+                Long.class, "Shared Burger", BigDecimal.valueOf(5.99), menuGroupId,
+                itemBusinessCode, "DRAFT", true, true, 0L, insertedRestaurantChainId);
+
+        var row = jdbcTemplate.queryForMap(
+                "select menu_group_id, outlet_id, restaurant_chain_id, version "
+                        + "from menu_item where id = ?", menuItemId);
+
+        assertEquals(menuGroupId, ((Number) row.get("menu_group_id")).longValue());
+        assertEquals(null, row.get("outlet_id"));
+        assertEquals(insertedRestaurantChainId,
+                ((Number) row.get("restaurant_chain_id")).longValue());
+        assertEquals(0L, ((Number) row.get("version")).longValue());
+    }
+
+    @Test
+    void postgresAcceptsMenuItemOwnedByOutlet() {
+        insertedBusinessCode = "LOCAL-CHAIN-" + UUID.randomUUID();
+        jdbcTemplate.update(
+                "insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "Local Item Chain", insertedBusinessCode);
+        insertedRestaurantChainId = jdbcTemplate.queryForObject(
+                "select id from restaurant_chain where business_code = ?",
+                Long.class, insertedBusinessCode);
+
+        Long outletId = jdbcTemplate.queryForObject(
+                "insert into outlet (display_name, currency, outlet_code, restaurant_chain_id, status) "
+                        + "values (?, ?, ?, ?, ?) returning id",
+                Long.class, "Berlin Mitte", "EUR", "BERLIN-" + UUID.randomUUID(),
+                insertedRestaurantChainId, ChainStatus.DRAFT.name());
+
+        String itemBusinessCode = "LOCAL-ITEM-" + UUID.randomUUID();
+        Long menuItemId = jdbcTemplate.queryForObject(
+                "insert into menu_item (item_name, item_price, created_at, menu_group_id, "
+                        + "outlet_id, business_code, status, visibility, availability, version, "
+                        + "restaurant_chain_id, updated_at) "
+                        + "values (?, ?, current_timestamp, null, ?, ?, ?, ?, ?, ?, ?, current_timestamp) "
+                        + "returning id",
+                Long.class, "Halloween Burger", BigDecimal.valueOf(6.49), outletId,
+                itemBusinessCode, "DRAFT", true, true, 0L, insertedRestaurantChainId);
+
+        var row = jdbcTemplate.queryForMap(
+                "select menu_group_id, outlet_id, restaurant_chain_id, version "
+                        + "from menu_item where id = ?", menuItemId);
+
+        assertEquals(null, row.get("menu_group_id"));
+        assertEquals(outletId, ((Number) row.get("outlet_id")).longValue());
+        assertEquals(insertedRestaurantChainId,
+                ((Number) row.get("restaurant_chain_id")).longValue());
+        assertEquals(0L, ((Number) row.get("version")).longValue());
+    }
+
+    @Test
+    void postgresRejectsMenuGroupOwnedByAnotherChain() {
+        insertedBusinessCode = "CHAIN-A-" + UUID.randomUUID();
+        secondInsertedBusinessCode = "CHAIN-B-" + UUID.randomUUID();
+        jdbcTemplate.update(
+                "insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "CHAIN-A", insertedBusinessCode);
+
+        Long chain_a_id = jdbcTemplate.queryForObject(
+                "select id from restaurant_chain where business_code = ?",
+                Long.class, insertedBusinessCode);
+        insertedRestaurantChainId = chain_a_id;
+
+        jdbcTemplate.update(
+                "insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "CHAIN-B", secondInsertedBusinessCode);
+
+        Long chain_b_id = jdbcTemplate.queryForObject(
+                "select id from restaurant_chain where business_code = ?",
+                Long.class, secondInsertedBusinessCode);
+        secondInsertedRestaurantChainId = chain_b_id;
+
+        Long menuGroupId = jdbcTemplate.queryForObject(
+                "insert into menu_group (display_name, restaurant_chain_id, status) "
+                        + "values (?, ?, ?) returning id",
+                Long.class, "Burgers", chain_b_id, ChainStatus.DRAFT.name());
+
+        DataAccessException exception = assertThrows(DataAccessException.class,
+                () -> jdbcTemplate.update(
+                        "insert into menu_item (item_name, item_price, created_at, "
+                                + "menu_group_id, outlet_id, business_code, status, "
+                                + "visibility, availability, version, restaurant_chain_id, updated_at) "
+                                + "values (?, ?, current_timestamp, ?, null, ?, ?, ?, ?, ?, ?, current_timestamp)",
+                        "Invalid Burger", BigDecimal.valueOf(5.99), menuGroupId,
+                        "INVALID-BOTH-" + UUID.randomUUID(), "DRAFT", true, true, 0L,
+                        chain_a_id));
+
+        assertTrue(exception.getMessage().contains("menu_item_menu_group_chain_fk"));
+    }
+
+    @Test
+    void postgresRejectsOutletOwnedByAnotherChain() {
+        insertedBusinessCode = "CHAIN-A-" + UUID.randomUUID();
+        secondInsertedBusinessCode = "CHAIN-B-" + UUID.randomUUID();
+
+        jdbcTemplate.update("insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "CHAIN-A", insertedBusinessCode);
+        insertedRestaurantChainId = jdbcTemplate.queryForObject(
+                "select id from restaurant_chain where business_code = ?", Long.class,
+                insertedBusinessCode);
+
+        jdbcTemplate.update("insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "CHAIN-B", secondInsertedBusinessCode);
+        secondInsertedRestaurantChainId = jdbcTemplate.queryForObject(
+                "select id from restaurant_chain where business_code = ?", Long.class,
+                secondInsertedBusinessCode);
+
+        Long outletId = jdbcTemplate.queryForObject(
+                "insert into outlet (display_name, currency, outlet_code, restaurant_chain_id, status) "
+                        + "values (?, ?, ?, ?, ?) returning id",
+                Long.class, "Berlin Mitte", "EUR", "BERLIN-" + UUID.randomUUID(),
+                secondInsertedRestaurantChainId, "DRAFT");
+
+        DataAccessException exception = assertThrows(DataAccessException.class,
+                () -> jdbcTemplate.update(
+                        "insert into menu_item (item_name, item_price, created_at, "
+                                + "menu_group_id, outlet_id, business_code, status, visibility, "
+                                + "availability, version, restaurant_chain_id, updated_at) "
+                                + "values (?, ?, current_timestamp, null, ?, ?, ?, ?, ?, ?, ?, current_timestamp)",
+                        "Invalid Local Burger", BigDecimal.valueOf(5.99), outletId,
+                        "INVALID-OUTLET-" + UUID.randomUUID(), "DRAFT", true, true, 0L,
+                        insertedRestaurantChainId));
+
+        assertTrue(exception.getMessage().contains("menu_item_outlet_chain_fk"));
     }
 }

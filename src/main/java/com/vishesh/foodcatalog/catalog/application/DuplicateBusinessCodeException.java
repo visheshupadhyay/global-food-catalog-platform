@@ -9,5 +9,4 @@ public class DuplicateBusinessCodeException extends RuntimeException {
     public DuplicateBusinessCodeException(String string) {
         super(string);
     }
-    
 }
