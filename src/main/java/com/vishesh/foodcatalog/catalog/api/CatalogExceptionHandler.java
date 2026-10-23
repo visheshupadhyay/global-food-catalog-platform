@@ -8,8 +8,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.vishesh.foodcatalog.catalog.application.DuplicateBusinessCodeException;
 import com.vishesh.foodcatalog.catalog.application.DuplicateMenuGroupException;
+import com.vishesh.foodcatalog.catalog.application.DuplicateMenuItemException;
 import com.vishesh.foodcatalog.catalog.application.MenuGroupNotFoundException;
 import com.vishesh.foodcatalog.catalog.application.MenuGroupVersionConflictException;
+import com.vishesh.foodcatalog.catalog.application.OutletNotFoundException;
 import com.vishesh.foodcatalog.catalog.application.RestaurantChainNotFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -66,7 +68,7 @@ public class CatalogExceptionHandler {
             RestaurantChainNotFoundException exception,
             HttpServletRequest servletRequest) {
 
-        // The requested restaurant chain does not exist, so the API returns 404.
+        // The requested menu group does not exist or belongs to another chain.
         int status = HttpStatus.NOT_FOUND.value();
         String message = exception.getMessage();
         String path = servletRequest.getRequestURI();
@@ -82,6 +84,34 @@ public class CatalogExceptionHandler {
 
         // The requested menu group already exists, so the API returns 409.
         int status = HttpStatus.CONFLICT.value();
+        String message = exception.getMessage();
+        String path = servletRequest.getRequestURI();
+
+        ApiError apiError = new ApiError(status, message, path);
+        return ResponseEntity.status(status).body(apiError);
+    }
+
+    @ExceptionHandler(DuplicateMenuItemException.class)
+    public ResponseEntity<ApiError> handleDuplicateMenuItem(
+            DuplicateMenuItemException exception,
+            HttpServletRequest servletRequest) {
+
+        // The requested menu item already exists, so the API returns 409.
+        int status = HttpStatus.CONFLICT.value();
+        String message = exception.getMessage();
+        String path = servletRequest.getRequestURI();
+
+        ApiError apiError = new ApiError(status, message, path);
+        return ResponseEntity.status(status).body(apiError);
+    }
+
+    @ExceptionHandler(OutletNotFoundException.class)
+    public ResponseEntity<ApiError> handleOutletNotFound(
+            OutletNotFoundException exception,
+            HttpServletRequest servletRequest) {
+
+        // The outlet is missing or belongs to another restaurant chain.
+        int status = HttpStatus.NOT_FOUND.value();
         String message = exception.getMessage();
         String path = servletRequest.getRequestURI();
 

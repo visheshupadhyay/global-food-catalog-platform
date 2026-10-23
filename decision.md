@@ -384,3 +384,33 @@ The following Release 1.0 decision remains open:
 Release 1.1 feature selection will be revisited after Release 1.0 is complete.
 
 The exact count and calculation are maintained in `docs/decision-progress.md`.
+
+## 9. Confirmed item-creation decisions
+
+### D-057 - Separate creation endpoints for shared and outlet-local items
+
+**Decision:** use separate REST operations for shared menu items and outlet-local menu items.
+
+**Rule:** a shared item is created under a menu group; a local item is created under an outlet. The URL makes the ownership choice clear instead of asking one request body to describe two different ownership models.
+
+### D-058 - Custom duplicate-menu-item exception
+
+**Decision:** duplicate chain-scoped menu-item business codes throw `DuplicateMenuItemException`.
+
+**Reason:** this expresses a business conflict clearly and can later map naturally to HTTP `409 Conflict`, consistent with duplicate menu-group handling.
+
+### D-059 - Optional category for outlet-local item creation
+
+**Decision:** `menuCategoryId` is optional when creating an outlet-local item.
+
+**Rule:** when an administrator supplies a category ID, the service validates that the category belongs to the same outlet and is usable. When the ID is omitted, the service finds or creates the outlet's default local Specials category and assigns its generated ID to the item.
+
+**Reason:** administrators can place an item in an existing category while still allowing a new local item to be created without requiring the caller to know a category ID in advance.
+
+### D-060 - Outlet default category display name
+
+**Decision:** the default local category is initially named using the outlet's display name followed by ` Specials`, for example `Berlin Mitte Specials`.
+
+**Rule:** create this category only once and reuse it for later local items. The lookup must not depend only on the visible name, because an outlet display name may change.
+
+**Status:** the stable internal lookup mechanism (category-purpose field versus a separate outlet mapping) remains an implementation decision and is not assumed here.

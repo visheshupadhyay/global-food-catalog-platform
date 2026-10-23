@@ -18,6 +18,17 @@
 4. The database must enforce exactly one owner:
    menu_group_id XOR outlet_id.
 5. A local item appears only in its owning outlet and never in sibling outlets.
+
+## Menu Item Creation
+1. A shared item is created under a menu group URL.
+2. An outlet-local item is created under an outlet URL.
+3. The service checks that the parent chain exists before checking the owner.
+4. A menu group or outlet must belong to the same restaurant chain as the item.
+5. New items start in `DRAFT` status with version `0`.
+6. Business codes are unique within their restaurant chain.
+
+These checks are made in the service for clear API errors and protected again by
+PostgreSQL foreign keys and check constraints.
 ## Outlet Overrides
 1. An OutletOverride connects one outlet to one inherited base menu item.
 2. An outlet may create an override only for an item from the outlet’s currently active MenuGroup.
