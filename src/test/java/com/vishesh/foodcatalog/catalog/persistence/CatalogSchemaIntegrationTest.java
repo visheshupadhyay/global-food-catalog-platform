@@ -4,13 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Optional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -24,6 +25,7 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import com.vishesh.foodcatalog.TestcontainersConfiguration;
 import com.vishesh.foodcatalog.catalog.domain.ChainStatus;
+import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
 import com.vishesh.foodcatalog.catalog.domain.RestaurantChain;
 import com.vishesh.foodcatalog.catalog.persistence.adapter.RestaurantChainPersistenceAdapter;
 import com.vishesh.foodcatalog.catalog.persistence.entity.MenuGroupEntity;
@@ -38,6 +40,9 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 class CatalogSchemaIntegrationTest {
+
+    private static final int EXPECTED_MIGRATION_COUNT = 7;
+    private static final Long UNKNOWN_CHAIN_ID = 999999999L;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -58,35 +63,42 @@ class CatalogSchemaIntegrationTest {
 
     @AfterEach
     void cleanUp() {
-        if (secondInsertedRestaurantChainId != null) {
-            jdbcTemplate.update("delete from menu_item where restaurant_chain_id = ?",
-                    secondInsertedRestaurantChainId);
-            jdbcTemplate.update("delete from outlet where restaurant_chain_id = ?",
-                    secondInsertedRestaurantChainId);
-            jdbcTemplate.update("delete from menu_group where restaurant_chain_id = ?",
-                    secondInsertedRestaurantChainId);
-            secondInsertedRestaurantChainId = null;
+        deleteChainData(secondInsertedRestaurantChainId, secondInsertedBusinessCode);
+        deleteChainData(insertedRestaurantChainId, insertedBusinessCode);
+
+        secondInsertedRestaurantChainId = null;
+        secondInsertedBusinessCode = null;
+        insertedRestaurantChainId = null;
+        insertedBusinessCode = null;
+    }
+
+    private void deleteChainData(Long restaurantChainId, String businessCode) {
+        if (restaurantChainId == null && businessCode == null) {
+            return;
         }
 
-        if (secondInsertedBusinessCode != null) {
-            jdbcTemplate.update("delete from restaurant_chain where business_code = ?",
-                    secondInsertedBusinessCode);
-            secondInsertedBusinessCode = null;
+        if (restaurantChainId != null) {
+            deleteOverridesForChain(restaurantChainId);
+            jdbcTemplate.update("delete from menu_group_outlet where menu_group_id in "
+                    + "(select id from menu_group where restaurant_chain_id = ?)",
+                    restaurantChainId);
+            jdbcTemplate.update("delete from menu_item where restaurant_chain_id = ?", restaurantChainId);
+            jdbcTemplate.update("delete from outlet where restaurant_chain_id = ?", restaurantChainId);
+            jdbcTemplate.update("delete from menu_group where restaurant_chain_id = ?", restaurantChainId);
         }
-        if (insertedRestaurantChainId != null) {
-            jdbcTemplate.update("delete from menu_item where restaurant_chain_id = ?",
-                    insertedRestaurantChainId);
-            jdbcTemplate.update("delete from outlet where restaurant_chain_id = ?",
-                    insertedRestaurantChainId);
-            jdbcTemplate.update("delete from menu_group where restaurant_chain_id = ?",
-                    insertedRestaurantChainId);
-            insertedRestaurantChainId = null;
+
+        if (businessCode != null) {
+            jdbcTemplate.update("delete from restaurant_chain where business_code = ?", businessCode);
         }
-        if (insertedBusinessCode != null) {
-            jdbcTemplate.update("delete from restaurant_chain where business_code = ?",
-                    insertedBusinessCode);
-            insertedBusinessCode = null;
-        }
+    }
+
+    private void deleteOverridesForChain(Long restaurantChainId) {
+        jdbcTemplate.update(
+                "delete from outlet_override where outlet_id in "
+                        + "(select id from outlet where restaurant_chain_id = ?) "
+                        + "or base_menu_item_id in "
+                        + "(select id from menu_item where restaurant_chain_id = ?)",
+                restaurantChainId, restaurantChainId);
     }
 
     @Test
@@ -113,7 +125,7 @@ class CatalogSchemaIntegrationTest {
         Integer successfulMigrations = jdbcTemplate.queryForObject(
                 "select count(*) from flyway_schema_history where success = true",
                 Integer.class);
-        assertEquals(6, successfulMigrations);
+        assertEquals(EXPECTED_MIGRATION_COUNT, successfulMigrations);
     }
 
     @Test
@@ -351,7 +363,7 @@ class CatalogSchemaIntegrationTest {
     }
 
     @Test
-    public void renameIncrementsVersion() {
+    void renameIncrementsVersion() {
         String businessCode = "VERSION-TEST-" + UUID.randomUUID();
         insertedBusinessCode = businessCode;
         String displayName = "Burger-House";
@@ -370,7 +382,7 @@ class CatalogSchemaIntegrationTest {
     }
 
     @Test
-    public void renameTrimsDisplayName() {
+    void renameTrimsDisplayName() {
         String businessCode = "VERSION-TEST-" + UUID.randomUUID();
         insertedBusinessCode = businessCode;
         RestaurantChain savedRestaurantChain = persistenceAdapter
@@ -386,7 +398,7 @@ class CatalogSchemaIntegrationTest {
     }
 
     @Test
-    public void renameRejectsBlankDisplayName() {
+    void renameRejectsBlankDisplayName() {
         String businessCode = "VERSION-TEST-" + UUID.randomUUID();
         insertedBusinessCode = businessCode;
         RestaurantChain savedRestaurantChain = persistenceAdapter
@@ -400,7 +412,7 @@ class CatalogSchemaIntegrationTest {
     }
 
     @Test
-    public void renameRejectsNullDisplayName() {
+    void renameRejectsNullDisplayName() {
         String businessCode = "VERSION-TEST-" + UUID.randomUUID();
         insertedBusinessCode = businessCode;
         RestaurantChain savedRestaurantChain = persistenceAdapter
@@ -413,7 +425,7 @@ class CatalogSchemaIntegrationTest {
     }
 
     @Test
-    public void optimisticLockRejectsStaleMenuGroupUpdate() {
+    void optimisticLockRejectsStaleMenuGroupUpdate() {
         String businessCode = "VERSION-TEST-" + UUID.randomUUID();
         insertedBusinessCode = businessCode;
         RestaurantChain savedRestaurantChain = persistenceAdapter
@@ -447,7 +459,7 @@ class CatalogSchemaIntegrationTest {
 
     @Test
     void findById_returnsEmptyWhenChainDoesNotExist() {
-        assertTrue(persistenceAdapter.findById(999999999L).isEmpty());
+        assertTrue(persistenceAdapter.findById(UNKNOWN_CHAIN_ID).isEmpty());
     }
 
     @Test
@@ -538,10 +550,11 @@ class CatalogSchemaIntegrationTest {
 
         var row = jdbcTemplate.queryForMap(
                 "select menu_group_id, outlet_id, restaurant_chain_id, version "
-                        + "from menu_item where id = ?", menuItemId);
+                        + "from menu_item where id = ?",
+                menuItemId);
 
         assertEquals(menuGroupId, ((Number) row.get("menu_group_id")).longValue());
-        assertEquals(null, row.get("outlet_id"));
+        assertNull(row.get("outlet_id"));
         assertEquals(insertedRestaurantChainId,
                 ((Number) row.get("restaurant_chain_id")).longValue());
         assertEquals(0L, ((Number) row.get("version")).longValue());
@@ -575,9 +588,10 @@ class CatalogSchemaIntegrationTest {
 
         var row = jdbcTemplate.queryForMap(
                 "select menu_group_id, outlet_id, restaurant_chain_id, version "
-                        + "from menu_item where id = ?", menuItemId);
+                        + "from menu_item where id = ?",
+                menuItemId);
 
-        assertEquals(null, row.get("menu_group_id"));
+        assertNull(row.get("menu_group_id"));
         assertEquals(outletId, ((Number) row.get("outlet_id")).longValue());
         assertEquals(insertedRestaurantChainId,
                 ((Number) row.get("restaurant_chain_id")).longValue());
@@ -592,24 +606,24 @@ class CatalogSchemaIntegrationTest {
                 "insert into restaurant_chain (display_name, business_code) values (?, ?)",
                 "CHAIN-A", insertedBusinessCode);
 
-        Long chain_a_id = jdbcTemplate.queryForObject(
+        Long chainAId = jdbcTemplate.queryForObject(
                 "select id from restaurant_chain where business_code = ?",
                 Long.class, insertedBusinessCode);
-        insertedRestaurantChainId = chain_a_id;
+        insertedRestaurantChainId = chainAId;
 
         jdbcTemplate.update(
                 "insert into restaurant_chain (display_name, business_code) values (?, ?)",
                 "CHAIN-B", secondInsertedBusinessCode);
 
-        Long chain_b_id = jdbcTemplate.queryForObject(
+        Long chainBId = jdbcTemplate.queryForObject(
                 "select id from restaurant_chain where business_code = ?",
                 Long.class, secondInsertedBusinessCode);
-        secondInsertedRestaurantChainId = chain_b_id;
+        secondInsertedRestaurantChainId = chainBId;
 
         Long menuGroupId = jdbcTemplate.queryForObject(
                 "insert into menu_group (display_name, restaurant_chain_id, status) "
                         + "values (?, ?, ?) returning id",
-                Long.class, "Burgers", chain_b_id, ChainStatus.DRAFT.name());
+                Long.class, "Burgers", chainBId, ChainStatus.DRAFT.name());
 
         DataAccessException exception = assertThrows(DataAccessException.class,
                 () -> jdbcTemplate.update(
@@ -619,7 +633,7 @@ class CatalogSchemaIntegrationTest {
                                 + "values (?, ?, current_timestamp, ?, null, ?, ?, ?, ?, ?, ?, current_timestamp)",
                         "Invalid Burger", BigDecimal.valueOf(5.99), menuGroupId,
                         "INVALID-BOTH-" + UUID.randomUUID(), "DRAFT", true, true, 0L,
-                        chain_a_id));
+                        chainAId));
 
         assertTrue(exception.getMessage().contains("menu_item_menu_group_chain_fk"));
     }
@@ -658,5 +672,52 @@ class CatalogSchemaIntegrationTest {
                         insertedRestaurantChainId));
 
         assertTrue(exception.getMessage().contains("menu_item_outlet_chain_fk"));
+    }
+
+    @Test
+    void postgresAllowsVisibilityOnlyOutletOverride() {
+        insertedBusinessCode = "MENU-GROUP-TEST-" + UUID.randomUUID();
+
+        jdbcTemplate.update(
+                "insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "Schema Test Chain", insertedBusinessCode);
+
+        insertedRestaurantChainId = jdbcTemplate.queryForObject(
+                "select id from restaurant_chain where business_code = ?",
+                Long.class, insertedBusinessCode);
+
+        jdbcTemplate.update(
+                "insert into menu_group ( display_name,restaurant_chain_id,status) values (?,?,?)",
+                "Burgers", insertedRestaurantChainId, ChainStatus.DRAFT.name());
+
+        Long menuGroupId = jdbcTemplate.queryForObject(
+                "select id from menu_group where restaurant_chain_id = ?",
+                Long.class, insertedRestaurantChainId);
+
+        Long outletId = jdbcTemplate.queryForObject(
+                "insert into outlet (display_name,currency, outlet_code, restaurant_chain_id, status) "
+                        + "values (?,?, ?, ?, ?) returning id",
+                Long.class, "Berlin Mitte", "EUR", "BERLIN-" + UUID.randomUUID(),
+                insertedRestaurantChainId, ChainStatus.DRAFT.name());
+
+        Long baseMenuItemId = jdbcTemplate.queryForObject(
+                "insert into menu_item (item_name, item_price, created_at, "
+                        + "menu_group_id, outlet_id, business_code, status, "
+                        + "visibility, availability, version, restaurant_chain_id, updated_at) "
+                        + "values (?, ?, current_timestamp, ?, null, ?, ?, ?, ?, ?, ?, current_timestamp) "
+                        + "returning id",
+                Long.class, "Shared Burger", BigDecimal.valueOf(5.99), menuGroupId,
+                "VISIBILITY-ITEM-" + UUID.randomUUID(), MenuItemStatus.ACTIVE.name(), true, true, 0L,
+                insertedRestaurantChainId);
+
+        jdbcTemplate.update(
+                "insert into outlet_override (outlet_id, base_menu_item_id, override_visible) values (?, ?, ?)",
+                outletId, baseMenuItemId, false);
+
+        Boolean overrideVisible = jdbcTemplate.queryForObject(
+                "select override_visible from outlet_override where outlet_id = ? and base_menu_item_id = ?",
+                Boolean.class, outletId, baseMenuItemId);
+
+        assertEquals(Boolean.FALSE, overrideVisible);
     }
 }
