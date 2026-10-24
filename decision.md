@@ -414,3 +414,62 @@ The exact count and calculation are maintained in `docs/decision-progress.md`.
 **Rule:** create this category only once and reuse it for later local items. The lookup must not depend only on the visible name, because an outlet display name may change.
 
 **Status:** the stable internal lookup mechanism (category-purpose field versus a separate outlet mapping) remains an implementation decision and is not assumed here.
+
+## 10. Confirmed effective-menu decisions
+
+### D-061 - Effective-menu inheritance and sparse override resolution
+
+**Decision:** resolve the customer menu from base menu items plus sparse overrides for one outlet.
+
+**Rule:** each effective field starts with the base value. An override changes only a non-null override field:
+
+- `price` overrides only price;
+- `availability` overrides only availability;
+- `visibility` overrides only visibility.
+
+An empty override therefore inherits every base value. A base item hidden or archived by head office cannot be made customer-visible by an outlet override.
+
+### D-062 - Effective-menu assembly guards
+
+**Decision:** the effective-menu assembler rejects inconsistent source data before returning a customer menu.
+
+**Rule:** an override must belong to the requested outlet and reference a supplied base item. Only one override may exist for a given outlet and base-item pair. Outlet-local items must belong to the requested outlet.
+
+### D-063 - Customer-effective menu filtering and ordering
+
+**Decision:** customer reads include only active, visible items.
+
+**Rule:** an active and visible but unavailable item remains in the menu and is shown as currently unavailable. Draft, hidden, and archived items are excluded. The result is immutable and ordered case-insensitively by item name, then by item ID for a deterministic tie-break.
+
+### D-064 - Public outlet absence is represented as not found
+
+**Decision:** a customer request for a missing, draft, or archived outlet receives the same `404 Not Found` response.
+
+**Reason:** customers should not learn whether an unpublished or retired outlet exists. The application reuses `OutletNotFoundException` for this public boundary.
+
+### D-065 - One effective-menu source-data bundle
+
+**Decision:** the read boundary returns one `EffectiveMenuSourceData` bundle containing outlet ID, outlet status, base items, overrides, and outlet-local items.
+
+**Rule:** an empty optional means the outlet does not exist. Draft and archived outlets are returned with their status so the application service can apply the public `404` rule. Empty lists are valid; null lists are rejected; lists are defensively immutable.
+
+### D-066 - Dedicated effective-menu read provider
+
+**Decision:** `EffectiveMenuService` depends on an `EffectiveMenuDataProvider` port instead of directly using persistence repositories.
+
+**Reason:** application logic stays independent of PostgreSQL/JPA, and the provider can later be replaced by the Effective Menu Service's materialized read model without changing customer-menu rules.
+
+### D-067 - Projection-based effective-menu queries
+
+**Decision:** use Spring Data JPA projections for effective-menu source reads instead of loading full write-side entities or using `JdbcTemplate` in Release 1.0.
+
+**Rule:** keep the read queries in a dedicated `EffectiveMenuJpaReadRepository`, rather than scattering them across write-oriented JPA repositories.
+
+**Reason:** the customer read path selects only the fields required to resolve a menu while keeping query definitions typed, testable, and separate from command persistence.
+
+### D-068 - Consistent effective-menu source snapshot
+
+**Decision:** the PostgreSQL effective-menu provider reads its source rows inside a short read-only `REPEATABLE_READ` transaction.
+
+**Reason:** base items, overrides, and outlet-local items must describe one consistent point in time; the resolver must not combine rows from before and after a concurrent catalog update.
+
