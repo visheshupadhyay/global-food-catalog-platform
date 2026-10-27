@@ -473,3 +473,45 @@ An empty override therefore inherits every base value. A base item hidden or arc
 
 **Reason:** base items, overrides, and outlet-local items must describe one consistent point in time; the resolver must not combine rows from before and after a concurrent catalog update.
 
+## 11. Confirmed event delivery and DLQ decisions
+
+### D-069 - Generic menu-item change event
+
+**Decision:** publish one generic `MENU_ITEM_CHANGED` event type for menu-item changes.
+
+**Rule:** events identify the affected item and carry changed fields plus an aggregate version. Consumers ignore stale versions.
+
+### D-070 - Event identity and Kafka key
+
+**Decision:** every event has a unique `eventId`; `itemId` identifies the changed item and `aggregateVersion` identifies its source version. Kafka uses `itemId` as the message key.
+
+### D-071 - Ignore stale event versions
+
+**Decision:** an older event version is acknowledged and ignored. Malformed events or processing failures follow retry/DLQ handling.
+
+### D-072 - Outbox status and retry metadata
+
+**Decision:** outbox records track `PENDING`, `PUBLISHED`, and `FAILED`, together with retry count and next retry time. The outbox is written in the same transaction as the catalog change.
+
+### D-073 - Three attempts with configurable backoff
+
+**Decision:** a failed publish receives at most three total attempts. Delays are configured in `application.properties`, initially `1s`, `5s`, and `30s`.
+
+### D-074 - DLQ keeps failure context
+
+**Decision:** a final failure moves to the DLQ with the original event, error message, attempt count, and failure timestamp.
+
+### D-075 - DLQ recovery
+
+**Decision:** support manual replay and leave room for automatic scheduled replay; manual replay is the initial Release 1.0 operational path.
+
+### D-076 - Replay identity and retry count
+
+**Decision:** replay creates a new event ID and stores the failed ID as `originalEventId`. Replay starts with retry count zero; previous attempts remain in audit metadata.
+
+### D-077 - Secured asynchronous replay endpoint
+
+**Decision:** an authenticated admin uses an internal REST endpoint to replay one DLQ event. It returns `202 Accepted` with the new replay event ID and `PENDING` status.
+
+**Rule:** this endpoint is not part of the public customer API and does not wait for Kafka publishing.
+

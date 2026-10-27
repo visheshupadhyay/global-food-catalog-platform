@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -19,14 +21,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import com.vishesh.foodcatalog.TestcontainersConfiguration;
+import com.vishesh.foodcatalog.catalog.application.MenuItemService;
+import com.vishesh.foodcatalog.catalog.api.MenuItemUpdateRequest;
 import com.vishesh.foodcatalog.catalog.domain.ChainStatus;
 import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
 import com.vishesh.foodcatalog.catalog.domain.RestaurantChain;
+import com.vishesh.foodcatalog.catalog.event.application.OutboxEventRepository;
+import com.vishesh.foodcatalog.catalog.event.domain.OutboxEvent;
+import com.vishesh.foodcatalog.catalog.persistence.adapter.MenuItemPersistenceAdapter;
 import com.vishesh.foodcatalog.catalog.persistence.adapter.RestaurantChainPersistenceAdapter;
 import com.vishesh.foodcatalog.catalog.persistence.entity.MenuGroupEntity;
 import com.vishesh.foodcatalog.catalog.persistence.repository.MenuGroupJpaRepository;
@@ -41,7 +49,7 @@ import jakarta.persistence.EntityManager;
 @Import(TestcontainersConfiguration.class)
 class CatalogSchemaIntegrationTest {
 
-    private static final int EXPECTED_MIGRATION_COUNT = 7;
+    private static final int EXPECTED_MIGRATION_COUNT = 10;
     private static final Long UNKNOWN_CHAIN_ID = 999999999L;
 
     @Autowired
@@ -49,6 +57,15 @@ class CatalogSchemaIntegrationTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private MenuItemService menuItemService;
+
+    @Autowired
+    private MenuItemPersistenceAdapter menuItemPersistenceAdapter;
+
+    @MockitoBean
+    private OutboxEventRepository outboxEventRepository;
 
     private String insertedBusinessCode;
     private Long insertedRestaurantChainId;
@@ -276,6 +293,57 @@ class CatalogSchemaIntegrationTest {
                 Long.class, insertedRestaurantChainId);
 
         assertEquals(0L, version);
+    }
+
+    @Test
+    void menuItemUpdate_rollsBackWhenOutboxSaveFails() {
+        insertedBusinessCode = "ROLLBACK-TEST-" + UUID.randomUUID();
+
+        jdbcTemplate.update(
+                "insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "Rollback Test Chain", insertedBusinessCode);
+        insertedRestaurantChainId = jdbcTemplate.queryForObject(
+                "select id from restaurant_chain where business_code = ?",
+                Long.class, insertedBusinessCode);
+
+        jdbcTemplate.update(
+                "insert into menu_group (display_name, restaurant_chain_id, status) values (?, ?, ?)",
+                "Burgers", insertedRestaurantChainId, ChainStatus.ACTIVE.name());
+        Long menuGroupId = jdbcTemplate.queryForObject(
+                "select id from menu_group where restaurant_chain_id = ?",
+                Long.class, insertedRestaurantChainId);
+
+        String businessCode = "ROLLBACK-ITEM-" + UUID.randomUUID();
+        jdbcTemplate.update(
+                "insert into menu_item (item_name, item_price, created_at, menu_group_id, "
+                        + "menu_category_id, outlet_id, business_code, status, visibility, availability, "
+                        + "version, restaurant_chain_id, updated_at) "
+                        + "values (?, ?, current_timestamp, ?, null, null, ?, ?, true, true, ?, ?, current_timestamp)",
+                "Burger", BigDecimal.valueOf(10), menuGroupId, businessCode,
+                MenuItemStatus.ACTIVE.name(), 1L, insertedRestaurantChainId);
+
+        Long menuItemId = jdbcTemplate.queryForObject(
+                "select id from menu_item where business_code = ?",
+                Long.class, businessCode);
+        Integer outboxRowsBefore = jdbcTemplate.queryForObject(
+                "select count(*) from outbox_event", Integer.class);
+
+        doThrow(new RuntimeException("forced outbox failure"))
+                .when(outboxEventRepository).save(any(OutboxEvent.class));
+
+        assertThrows(RuntimeException.class, () -> menuItemService.updateMenuItem(
+                menuItemId,
+                insertedRestaurantChainId,
+                new MenuItemUpdateRequest(1L, BigDecimal.valueOf(12), null, null)));
+
+        var reloaded = menuItemPersistenceAdapter.findByIdAndRestaurantChainId(
+                menuItemId, insertedRestaurantChainId).orElseThrow();
+        assertEquals(BigDecimal.valueOf(10).setScale(2), reloaded.getItemPrice());
+        assertEquals(1L, reloaded.getVersion());
+
+        Integer outboxRowsAfter = jdbcTemplate.queryForObject(
+                "select count(*) from outbox_event", Integer.class);
+        assertEquals(outboxRowsBefore, outboxRowsAfter);
     }
 
     @Test

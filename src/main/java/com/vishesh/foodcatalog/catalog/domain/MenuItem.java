@@ -90,7 +90,8 @@ public class MenuItem {
 
     /**
      * Checks rules that apply to both a newly created and a persisted item.
-     * A menu item must belong to exactly one owner: a shared menu group or an outlet.
+     * A menu item must belong to exactly one owner: a shared menu group or an
+     * outlet.
      */
     private static void validateCommonFields(
             String businessCode,
@@ -189,6 +190,22 @@ public class MenuItem {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void updatePrice(BigDecimal updatedPrice) {
+        if (updatedPrice == null || updatedPrice.signum() < 0) {
+            throw new IllegalArgumentException("Item price must be zero or greater");
+        }
+        this.itemPrice = updatedPrice;
+    }
+
+    public void updateAvailability(boolean updatedAvailability) {
+
+        this.availability = updatedAvailability;
+    }
+
+    public void updateVisibility(boolean updatedVisibility) {
+        this.visibility = updatedVisibility;
     }
 
 }
