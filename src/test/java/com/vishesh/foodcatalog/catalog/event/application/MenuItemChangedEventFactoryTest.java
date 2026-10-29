@@ -39,7 +39,9 @@ class MenuItemChangedEventFactoryTest {
                 null,
                 null,
                 OUTLET_ID,
-                "corr-123", MenuItemStatus.ACTIVE);
+                "corr-123",
+                MenuItemStatus.ACTIVE,
+                "Veg Burger");
 
         assertNotNull(event.getEventId());
         assertEquals(OutboxEventType.MENU_ITEM_CHANGED, event.getEventType());
@@ -52,13 +54,23 @@ class MenuItemChangedEventFactoryTest {
         assertNull(event.getVisibility());
         assertEquals("corr-123", event.getCorrelationId());
         assertEquals(MenuItemStatus.ACTIVE, event.getStatus());
+        assertEquals("Veg Burger", event.getItemName());
         assertNotNull(event.getOccurredAt());
     }
 
     @Test
     void create_availabilityChangeEvent_keepsOtherFieldsSparse() {
         MenuItemChangedEvent event = factory.create(
-                ITEM_ID, CHAIN_ID, VERSION, null, false, null, OUTLET_ID, null, MenuItemStatus.ACTIVE);
+                ITEM_ID,
+                CHAIN_ID,
+                VERSION,
+                null,
+                false,
+                null,
+                OUTLET_ID,
+                null,
+                MenuItemStatus.ACTIVE,
+                "Veg Burger");
 
         assertNull(event.getPrice());
         assertEquals(Boolean.FALSE, event.getAvailability());
@@ -68,7 +80,7 @@ class MenuItemChangedEventFactoryTest {
     @Test
     void create_visibilityChangeEvent_keepsOtherFieldsSparse() {
         MenuItemChangedEvent event = factory.create(
-                ITEM_ID, CHAIN_ID, VERSION, null, null, false, OUTLET_ID, null, MenuItemStatus.HIDDEN);
+                ITEM_ID, CHAIN_ID, VERSION, null, null, false, OUTLET_ID, null, MenuItemStatus.HIDDEN,"Veg Burger");
 
         assertNull(event.getPrice());
         assertNull(event.getAvailability());
@@ -79,7 +91,7 @@ class MenuItemChangedEventFactoryTest {
     void create_multipleChanges_copiesEveryChangedValue() {
         MenuItemChangedEvent event = factory.create(
                 ITEM_ID, CHAIN_ID, VERSION, new BigDecimal("15.00"), true, false,
-                OUTLET_ID, "corr-456", MenuItemStatus.ACTIVE);
+                OUTLET_ID, "corr-456", MenuItemStatus.ACTIVE,"Veg Burger");
 
         assertEquals(new BigDecimal("15.00"), event.getPrice());
         assertEquals(Boolean.TRUE, event.getAvailability());
@@ -90,7 +102,7 @@ class MenuItemChangedEventFactoryTest {
     void create_withoutOutlet_createsSharedMenuItemEvent() {
         MenuItemChangedEvent event = factory.create(
                 ITEM_ID, CHAIN_ID, VERSION, new BigDecimal("10.00"), null, null,
-                null, null, MenuItemStatus.ACTIVE);
+                null, null, MenuItemStatus.ACTIVE,"Veg Burger");
 
         assertNull(event.getOutletId());
     }
@@ -99,49 +111,57 @@ class MenuItemChangedEventFactoryTest {
     void create_withoutChangedField_rejectsRequest() {
         assertThrows(IllegalArgumentException.class,
                 () -> factory.create(ITEM_ID, CHAIN_ID, VERSION, null, null, null,
-                        OUTLET_ID, null, null));
+                        OUTLET_ID, null, null,"Veg Burger"));
     }
 
     @Test
     void create_withNegativePrice_rejectsRequest() {
         assertThrows(IllegalArgumentException.class,
                 () -> factory.create(ITEM_ID, CHAIN_ID, VERSION, new BigDecimal("-1.00"),
-                        null, null, OUTLET_ID, null, MenuItemStatus.ACTIVE));
+                        null, null, OUTLET_ID, null, MenuItemStatus.ACTIVE,"Veg Burger"));
     }
 
     @Test
     void create_withInvalidRequiredId_rejectsRequest() {
         assertThrows(IllegalArgumentException.class,
                 () -> factory.create(null, CHAIN_ID, VERSION, BigDecimal.ONE, null, null,
-                        OUTLET_ID, null, MenuItemStatus.ACTIVE));
+                        OUTLET_ID, null, MenuItemStatus.ACTIVE,"Veg Burger"));
         assertThrows(IllegalArgumentException.class,
                 () -> factory.create(ITEM_ID, 0L, VERSION, BigDecimal.ONE, null, null,
-                        OUTLET_ID, null, MenuItemStatus.ACTIVE));
+                        OUTLET_ID, null, MenuItemStatus.ACTIVE,"Veg Burger"));
         assertThrows(IllegalArgumentException.class,
                 () -> factory.create(ITEM_ID, CHAIN_ID, -1L, BigDecimal.ONE, null, null,
-                        OUTLET_ID, null, MenuItemStatus.ACTIVE));
+                        OUTLET_ID, null, MenuItemStatus.ACTIVE,"Veg Burger"));
     }
 
     @Test
     void create_withInvalidOutletId_rejectsRequest() {
         assertThrows(IllegalArgumentException.class,
                 () -> factory.create(ITEM_ID, CHAIN_ID, VERSION, BigDecimal.ONE, null, null,
-                        0L, null, MenuItemStatus.ACTIVE));
+                        0L, null, MenuItemStatus.ACTIVE,"Veg Burger"));
     }
 
     @Test
     void create_withoutStatus_rejectsRequest() {
         assertThrows(IllegalArgumentException.class,
                 () -> factory.create(ITEM_ID, CHAIN_ID, VERSION,
-                        BigDecimal.ONE, null, null, OUTLET_ID, null, null));
+                        BigDecimal.ONE, null, null, OUTLET_ID, null, null,"Veg Burger"));
+    }
+
+    @Test
+    void create_withBlankItemName_rejectsRequest() {
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.create(ITEM_ID, CHAIN_ID, VERSION,
+                        BigDecimal.ONE, null, null, OUTLET_ID, null,
+                        MenuItemStatus.ACTIVE, "   "));
     }
 
     @Test
     void create_eachCall_generatesANewEventId() {
         MenuItemChangedEvent first = factory.create(
-                ITEM_ID, CHAIN_ID, VERSION, BigDecimal.ONE, null, null, OUTLET_ID, null, MenuItemStatus.ACTIVE);
+                ITEM_ID, CHAIN_ID, VERSION, BigDecimal.ONE, null, null, OUTLET_ID, null, MenuItemStatus.ACTIVE,"Veg Burger");
         MenuItemChangedEvent second = factory.create(
-                ITEM_ID, CHAIN_ID, VERSION, BigDecimal.ONE, null, null, OUTLET_ID, null, MenuItemStatus.ACTIVE);
+                ITEM_ID, CHAIN_ID, VERSION, BigDecimal.ONE, null, null, OUTLET_ID, null, MenuItemStatus.ACTIVE,"Veg Burger");
 
         assertNotEquals(first.getEventId(), second.getEventId());
     }

@@ -193,22 +193,22 @@ public class MenuItemService {
         List<Long> outletIds = new ArrayList<>();
         if (savedItem.getOutletId() != null) {
             outletIds.add(savedItem.getOutletId());
-        }
-        else {
+        } else {
             outletIds = menuGroupOutletRepository.findOutletIdsByMenuGroupId(savedItem.getMenuGroupId());
         }
 
-        for (Long outletId: outletIds) {
+        for (Long outletId : outletIds) {
             MenuItemChangedEvent menuItemChangedEvent = menuItemChangedEventFactory.create(
                     savedItem.getId(),
                     savedItem.getRestaurantChainId(),
                     savedItem.getVersion(),
-                    savedItem.getItemPrice(),
-                    savedItem.isAvailability(),
-                    savedItem.isVisibility(),
+                    updatedPrice,
+                    updatedAvailability,
+                    updatedVisibility,
                     outletId,
                     null,
-                    savedItem.getStatus());
+                    savedItem.getStatus(),
+                    null);
 
             String payload;
             try {
