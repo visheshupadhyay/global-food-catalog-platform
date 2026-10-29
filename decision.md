@@ -515,3 +515,104 @@ An empty override therefore inherits every base value. A base item hidden or arc
 
 **Rule:** this endpoint is not part of the public customer API and does not wait for Kafka publishing.
 
+## 12. Confirmed effective-menu read-model decisions
+
+### D-078 - Complete outlet snapshot read model
+
+**Decision:** the Effective Menu Service stores one complete effective-menu snapshot per outlet.
+
+**Reason:** customer reads are the highest-volume operation, so the serving path should be a fast, predictable read instead of recalculating the full menu for every request.
+
+**Trade-off:** a base-menu change may require rebuilding snapshots for many assigned outlets. Versioned events, idempotent consumers, and reconciliation protect against partial or stale rebuilds.
+
+### D-079 - Synchronous calculation during propagation delay
+
+**Decision:** if an outlet snapshot is temporarily behind the source version, the service may calculate the latest menu synchronously as a fallback.
+
+**Reason:** a short Kafka propagation delay should not make a healthy outlet unavailable to customers.
+
+**Rule:** the synchronous calculation is a bounded fallback, not the normal read path.
+
+### D-080 - Configurable maximum snapshot staleness
+
+**Decision:** snapshot staleness has a configurable maximum window.
+
+**Reason:** serving a slightly old snapshot briefly preserves availability, while an unlimited window could expose outdated prices or availability indefinitely.
+
+### D-081 - Controlled failure after the staleness limit
+
+**Decision:** when a snapshot exceeds the configured staleness limit and the synchronous fallback cannot provide a safe result, return `503 Service Unavailable`.
+
+**Rule:** use a stable error code such as `EFFECTIVE_MENU_TEMPORARILY_UNAVAILABLE`. Do not silently serve an excessively stale price or availability value.
+
+### D-082 - Separate database for the Effective Menu Service
+
+**Decision:** the Effective Menu Service owns a separate `effective_menu_db` database.
+
+**Rule:** it receives catalog changes through Kafka events and never reads or writes Catalog Command Service business tables directly.
+
+**Reason:** the read service can scale and evolve independently while preserving clear microservice data ownership. A local PostgreSQL container may host both databases during development, but each service still uses its own database and credentials.
+
+### D-083 - Effective-menu Kafka contract
+
+**Decision:** publish menu-item change events on `catalog.menu-item.changed` and consume them with the `effective-menu-read-model` consumer group.
+
+**Reason:** the topic names the business event clearly, while the consumer group names the read-model responsibility. The names are configurable through environment variables for deployment.
+
+### D-084 - Idempotency tracking for consumed events
+
+**Decision:** store consumed event IDs in a separate processed-event table.
+
+**Reason:** the Effective Menu Service needs to recognize duplicate Kafka deliveries without losing an audit trail. A separate table allows safe retries, replay investigation, and future reconciliation while keeping the menu snapshot focused on current customer-visible state.
+
+### D-085 - Catalog-owned fan-out for shared-item changes
+
+**Decision:** when a shared menu item changes, the Catalog Command Service finds every outlet assigned to that item's menu group and creates one outlet-specific outbox event per outlet.
+
+**Rules:**
+
+- local items create one event for their owning outlet;
+- shared items create one event for each assigned outlet;
+- a shared item with no assigned outlets creates no events;
+- each event carries the same item state and version but a different `outletId`;
+- the item update and all outbox saves occur in one transaction.
+
+**Reason:** the Effective Menu Service owns outlet snapshots and processes one outlet event at a time, while the Catalog Service owns the menu-group/outlet relationship.
+
+### D-086 - Consumer rejects events without a valid outlet
+
+**Decision:** the Effective Menu Service rejects a consumed event when `outletId` is null or non-positive.
+
+**Rules:** validation happens before processed-event lookup or snapshot access; the invalid event is not marked as processed and follows the configured retry/DLQ path.
+
+**Reason:** every new Catalog event is outlet-specific, but the consumer must protect its read model from malformed, replayed, or older producer data.
+
+### D-087 - Archived items cannot be recreated by events
+
+**Decision:** an item absent from an outlet snapshot is not recreated by a menu-item change event.
+
+**Rules:** hidden items remain controlled by `visibility`; unavailable items remain represented with `availability = false`; an event for an archived or removed item is rejected without saving a snapshot or processed-event record.
+
+**Reason:** the Effective Menu Service is a derived serving model and must not resurrect catalog content that the Catalog Command Service has removed from the customer-effective menu.
+
+### D-088 - Propagate item lifecycle status in the menu-item event
+
+**Decision:** extend `MenuItemChangedEvent` with the menu item's lifecycle status instead of introducing separate archive and restore event types.
+
+**Rules:**
+
+- `ARCHIVED` removes the item from the outlet snapshot;
+- `HIDDEN` keeps the item in the read model but makes it invisible to customers;
+- `ACTIVE` is applied only when the source data permits the item to be customer-visible;
+- status changes use the same aggregate version, idempotency, retry, and DLQ rules as other item changes.
+
+**Reason:** lifecycle changes belong to the same menu-item aggregate and can reuse the existing event and consumer pipeline.
+
+### D-089 - Customer lifecycle visibility
+
+**Decision:** the customer API returns visible items and keeps unavailable items visible as sold-out items.
+
+**Rules:** `HIDDEN`, `DRAFT`, and `ARCHIVED` items are not customer-visible. `availability = false` does not remove an item; it allows the customer menu to show that the item is sold out. Archived items are removed from the stored outlet snapshot.
+
+**Reason:** visibility and lifecycle status control whether an item should appear, while availability communicates ordering state to customers.
+

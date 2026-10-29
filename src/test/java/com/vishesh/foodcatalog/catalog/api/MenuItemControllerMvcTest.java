@@ -2,6 +2,9 @@ package com.vishesh.foodcatalog.catalog.api;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -19,6 +22,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.vishesh.foodcatalog.catalog.application.DuplicateMenuItemException;
 import com.vishesh.foodcatalog.catalog.application.MenuItemService;
+import com.vishesh.foodcatalog.catalog.application.MenuItemNotFoundException;
+import com.vishesh.foodcatalog.catalog.application.MenuItemVersionConflictException;
 import com.vishesh.foodcatalog.catalog.application.RestaurantChainNotFoundException;
 import com.vishesh.foodcatalog.catalog.domain.MenuItem;
 import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
@@ -239,6 +244,97 @@ public class MenuItemControllerMvcTest {
                         .value("Restaurant chain with ID: 901 not found"))
                 .andExpect(jsonPath("$.path")
                         .value("/api/v1/restaurant-chains/901/menu-items"));
+    }
+
+    @Test
+    void updateMenuItem_statusChange_returnsUpdatedStatus() throws Exception {
+        MenuItem savedItem = persistedMenuItem("BH-GE-101", "Mc Veg Burger", BigDecimal.valueOf(1.5),
+                101L, 201L, 301L, null);
+        MenuItem hiddenItem = new MenuItem(savedItem.getId(), savedItem.getItemName(), savedItem.getItemPrice(),
+                savedItem.getCreatedAt(), savedItem.getMenuGroupId(), savedItem.getMenuCategoryId(),
+                savedItem.getOutletId(), savedItem.getBusinessCode(), MenuItemStatus.HIDDEN,
+                false, true, 1L, savedItem.getRestaurantChainId(), savedItem.getUpdatedAt());
+
+        when(service.updateMenuItem(eq(401L), eq(101L), any(MenuItemUpdateRequest.class)))
+                .thenReturn(hiddenItem);
+
+        mockMvc.perform(patch("/api/v1/restaurant-chains/101/menu-items/401")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "expectedVersion": 0,
+                          "status": "HIDDEN"
+                        }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(401))
+                .andExpect(jsonPath("$.status").value("HIDDEN"))
+                .andExpect(jsonPath("$.version").value(1));
+
+        verify(service).updateMenuItem(eq(401L), eq(101L), any(MenuItemUpdateRequest.class));
+    }
+
+    @Test
+    void updateMenuItem_archivedStatus_returnsArchived() throws Exception {
+        MenuItem archived = new MenuItem(401L, "Burger", BigDecimal.TEN,
+                Instant.parse("2026-01-01T00:00:00Z"), 201L, 301L, null,
+                "BURGER-401", MenuItemStatus.ARCHIVED, true, true, 1L, 101L,
+                Instant.parse("2026-01-01T00:00:00Z"));
+        when(service.updateMenuItem(eq(401L), eq(101L), any(MenuItemUpdateRequest.class))).thenReturn(archived);
+
+        mockMvc.perform(patch("/api/v1/restaurant-chains/101/menu-items/401")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedVersion\":0,\"status\":\"ARCHIVED\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ARCHIVED"));
+    }
+
+    @Test
+    void updateMenuItem_staleVersion_returns409() throws Exception {
+        when(service.updateMenuItem(eq(401L), eq(101L), any(MenuItemUpdateRequest.class)))
+                .thenThrow(new MenuItemVersionConflictException("Menu item version is stale"));
+
+        mockMvc.perform(patch("/api/v1/restaurant-chains/101/menu-items/401")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedVersion\":0,\"status\":\"HIDDEN\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409));
+    }
+
+    @Test
+    void updateMenuItem_missingItem_returns404() throws Exception {
+        when(service.updateMenuItem(eq(999L), eq(101L), any(MenuItemUpdateRequest.class)))
+                .thenThrow(new MenuItemNotFoundException("Menu item was not found"));
+
+        mockMvc.perform(patch("/api/v1/restaurant-chains/101/menu-items/999")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedVersion\":0,\"status\":\"HIDDEN\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void updateMenuItem_missingRestaurantChain_returns404() throws Exception {
+        when(service.updateMenuItem(eq(401L), eq(999L), any(MenuItemUpdateRequest.class)))
+                .thenThrow(new RestaurantChainNotFoundException("Restaurant chain was not found"));
+
+        mockMvc.perform(patch("/api/v1/restaurant-chains/999/menu-items/401")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedVersion\":0,\"status\":\"HIDDEN\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void updateMenuItem_invalidTransition_returns409() throws Exception {
+        when(service.updateMenuItem(eq(401L), eq(101L), any(MenuItemUpdateRequest.class)))
+                .thenThrow(new IllegalStateException("Cannot change menu item status"));
+
+        mockMvc.perform(patch("/api/v1/restaurant-chains/101/menu-items/401")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedVersion\":0,\"status\":\"ACTIVE\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409));
     }
 
 

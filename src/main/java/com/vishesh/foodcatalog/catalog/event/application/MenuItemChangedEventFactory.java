@@ -6,10 +6,11 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
+import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
 import com.vishesh.foodcatalog.catalog.event.domain.MenuItemChangedEvent;
 import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventType;
 
-/** Builds one standard event whenever a menu item changes. */
+/** Builds the standard Kafka/outbox message whenever a menu item changes. */
 @Component
 public class MenuItemChangedEventFactory {
 
@@ -25,7 +26,8 @@ public class MenuItemChangedEventFactory {
             Boolean availability,
             Boolean visibility,
             Long outletId,
-            String correlationId) {
+            String correlationId,
+            MenuItemStatus status) {
 
         validatePositive(menuItemId, "Menu item id");
         validatePositive(restaurantChainId, "Restaurant chain id");
@@ -43,7 +45,8 @@ public class MenuItemChangedEventFactory {
                 availability,
                 visibility,
                 Instant.now(),
-                correlationId);
+                correlationId,
+                status);
     }
 
     private static void validatePositive(Long value, String field) {

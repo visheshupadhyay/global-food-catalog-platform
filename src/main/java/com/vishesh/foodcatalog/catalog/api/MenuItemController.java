@@ -5,6 +5,7 @@ import java.net.URI;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -83,7 +84,7 @@ public class MenuItemController {
                 menuItem.getRestaurantChainId(),
                 menuItem.getStatus(),
                 menuItem.getVersion(),
-                menuItem.getCreatedAt(), 
+                menuItem.getCreatedAt(),
                 menuItem.getUpdatedAt(),
                 menuItem.getOutletId(),
                 menuItem.getMenuCategoryId());
@@ -92,5 +93,29 @@ public class MenuItemController {
                 + "/outlets/" + outletId + "/menu-items/" + response.id());
 
         return ResponseEntity.created(location).body(response);
+    }
+
+    @PatchMapping("/menu-items/{menuItemId}")
+    public ResponseEntity<CreateSharedMenuItemResponse> updateMenuItem(
+            @PathVariable Long restaurantChainId,
+            @PathVariable Long menuItemId,
+            @Valid @RequestBody MenuItemUpdateRequest request) {
+
+        MenuItem menuItem = service.updateMenuItem(menuItemId, restaurantChainId, request);
+        CreateSharedMenuItemResponse response = new CreateSharedMenuItemResponse(
+                menuItem.getId(),
+                menuItem.getBusinessCode(),
+                menuItem.getItemName(),
+                menuItem.getItemPrice(),
+                menuItem.getRestaurantChainId(),
+                menuItem.getStatus(),
+                menuItem.getVersion(),
+                menuItem.getCreatedAt(),
+                menuItem.getUpdatedAt(),
+                menuItem.getOutletId(),
+                menuItem.getMenuGroupId(),
+                menuItem.getMenuCategoryId());
+
+        return ResponseEntity.ok(response);
     }
 }

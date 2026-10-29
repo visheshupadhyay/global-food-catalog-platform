@@ -81,6 +81,19 @@ class EffectiveMenuAssemblerTest {
 	}
 
 	@Test
+	void assemble_forBerlin_includesOnlyBerlinLocalItems() {
+		List<EffectiveMenuItem> result = assembler.assemble(
+				BERLIN_OUTLET_ID,
+				List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)),
+				List.of(),
+				List.of(localItem(201L, BERLIN_OUTLET_ID, "Berlin Special", true, true, MenuItemStatus.ACTIVE)));
+
+		assertEquals(List.of("Berlin Special", "Burger"),
+				result.stream().map(EffectiveMenuItem::getItemName).toList());
+		assertTrue(result.stream().anyMatch(item -> item.getMenuItemId().equals(201L)));
+	}
+
+	@Test
 	void assemble_excludesHiddenOrNonActiveOutletLocalItems() {
 		List<EffectiveMenuItem> result = assemble(List.of(), List.of(),
 				List.of(localItem(201L, BERLIN_OUTLET_ID, "Hidden", true, false, MenuItemStatus.ACTIVE),
@@ -93,6 +106,15 @@ class EffectiveMenuAssemblerTest {
 	void assemble_rejectsLocalItemForAnotherOutlet() {
 		assertThrows(IllegalArgumentException.class, () -> assemble(List.of(), List.of(),
 				List.of(localItem(201L, MUNICH_OUTLET_ID, "Munich Special", true, true, MenuItemStatus.ACTIVE))));
+	}
+
+	@Test
+	void assemble_forMunich_rejectsBerlinLocalItemInsteadOfLeakingIt() {
+		assertThrows(IllegalArgumentException.class, () -> assembler.assemble(
+				MUNICH_OUTLET_ID,
+				List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)),
+				List.of(),
+				List.of(localItem(201L, BERLIN_OUTLET_ID, "Berlin Special", true, true, MenuItemStatus.ACTIVE))));
 	}
 
 	@Test
@@ -131,19 +153,52 @@ class EffectiveMenuAssemblerTest {
 				List.of()));
 	}
 
-	@Test 
+	@Test
 	void assemble_afterOverrideIsRemoved_restoresBaseValue() {
 		BaseMenuItemSnapshot baseItem = baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE);
-		OutletOverrideSnapshot outletOverride = new OutletOverrideSnapshot(101L, BERLIN_OUTLET_ID, new BigDecimal("12.50"), null, null);
-		List<EffectiveMenuItem> result = assemble(List.of(baseItem),List.of(outletOverride),List.of());
+		OutletOverrideSnapshot outletOverride = new OutletOverrideSnapshot(101L, BERLIN_OUTLET_ID,
+				new BigDecimal("12.50"), null, null);
+		List<EffectiveMenuItem> result = assemble(List.of(baseItem), List.of(outletOverride), List.of());
 
 		assertEquals(1, result.size());
 		assertEquals(outletOverride.getPriceOverride(), result.get(0).getPrice());
 
-		result = assemble(List.of(baseItem),List.of(),List.of());
+		result = assemble(List.of(baseItem), List.of(), List.of());
 		assertEquals(1, result.size());
 		assertEquals(baseItem.getPrice(), result.get(0).getPrice());
 
+	}
+
+	@Test
+	void unavailableActiveItem_isIncludedButMarkedUnavailable() {
+		BaseMenuItemSnapshot baseItem = baseItem(101L, "Burger", false, true, MenuItemStatus.ACTIVE);
+		List<EffectiveMenuItem> result = assemble(List.of(baseItem), List.of(), List.of());
+		assertEquals(1, result.size());
+		assertEquals(baseItem.getMenuItemId(), result.get(0).getMenuItemId());
+		assertFalse(result.get(0).isAvailable());
+	}
+
+	@Test
+	void hiddenItem_isExcludedFromCustomerMenu() {
+		BaseMenuItemSnapshot baseItem = baseItem(101L, "Burger", true, false, MenuItemStatus.ACTIVE);
+		List<EffectiveMenuItem> result = assemble(List.of(baseItem), List.of(), List.of());
+		assertEquals(0, result.size());
+	}
+
+	@Test
+	void archivedItem_isExcludedFromCustomerMenu() {
+		BaseMenuItemSnapshot baseItem = baseItem(101L, "Burger", true, true, MenuItemStatus.ARCHIVED);
+		List<EffectiveMenuItem> result = assemble(List.of(baseItem), List.of(), List.of());
+		assertEquals(0, result.size());
+	}
+
+	@Test
+	void availableActiveItem_isShownAsOrderable() {
+		BaseMenuItemSnapshot baseItem = baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE);
+		List<EffectiveMenuItem> result = assemble(List.of(baseItem), List.of(), List.of());
+		assertEquals(1, result.size());
+		assertEquals(baseItem.getMenuItemId(), result.get(0).getMenuItemId());
+		assertTrue(result.get(0).isAvailable());
 	}
 
 	private List<EffectiveMenuItem> assemble(

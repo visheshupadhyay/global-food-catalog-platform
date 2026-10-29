@@ -11,6 +11,8 @@ import com.vishesh.foodcatalog.catalog.application.DuplicateMenuGroupException;
 import com.vishesh.foodcatalog.catalog.application.DuplicateMenuItemException;
 import com.vishesh.foodcatalog.catalog.application.MenuGroupNotFoundException;
 import com.vishesh.foodcatalog.catalog.application.MenuGroupVersionConflictException;
+import com.vishesh.foodcatalog.catalog.application.MenuItemNotFoundException;
+import com.vishesh.foodcatalog.catalog.application.MenuItemVersionConflictException;
 import com.vishesh.foodcatalog.catalog.application.OutletNotFoundException;
 import com.vishesh.foodcatalog.catalog.application.RestaurantChainNotFoundException;
 
@@ -140,5 +142,26 @@ public class CatalogExceptionHandler {
         int status = HttpStatus.CONFLICT.value();
         ApiError apiError = new ApiError(status, exception.getMessage(), servletRequest.getRequestURI());
         return ResponseEntity.status(status).body(apiError);
+    }
+
+    @ExceptionHandler(MenuItemNotFoundException.class)
+    public ResponseEntity<ApiError> handleMenuItemNotFound(
+            MenuItemNotFoundException exception, HttpServletRequest request) {
+        ApiError error = new ApiError(404, exception.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(MenuItemVersionConflictException.class)
+    public ResponseEntity<ApiError> handleMenuItemVersionConflict(
+            MenuItemVersionConflictException exception, HttpServletRequest request) {
+        ApiError error = new ApiError(409, exception.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiError> handleIllegalState(
+            IllegalStateException exception, HttpServletRequest request) {
+        ApiError error = new ApiError(409, exception.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 }

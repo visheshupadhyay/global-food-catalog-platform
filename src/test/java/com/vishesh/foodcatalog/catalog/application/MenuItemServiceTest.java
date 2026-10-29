@@ -7,15 +7,18 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -32,6 +35,7 @@ import com.vishesh.foodcatalog.catalog.domain.MenuItem;
 import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
 import com.vishesh.foodcatalog.catalog.domain.RestaurantChain;
 import com.vishesh.foodcatalog.catalog.repository.MenuGroupRepository;
+import com.vishesh.foodcatalog.catalog.repository.MenuGroupOutletRepository;
 import com.vishesh.foodcatalog.catalog.repository.MenuItemRepository;
 import com.vishesh.foodcatalog.catalog.repository.OutletRepository;
 import com.vishesh.foodcatalog.catalog.repository.RestaurantChainRepository;
@@ -56,6 +60,9 @@ public class MenuItemServiceTest {
     private MenuGroupRepository menuGroupRepository;
 
     @Mock
+    private MenuGroupOutletRepository menuGroupOutletRepository;
+
+    @Mock
     private MenuItemChangedEventFactory menuItemChangedEventFactory;
 
     @Mock
@@ -74,14 +81,38 @@ public class MenuItemServiceTest {
                 menuGroupRepository,
                 menuItemChangedEventFactory,
                 outboxEventRepository,
-                objectMapper);
+                objectMapper,
+                menuGroupOutletRepository);
+
+        lenient().when(menuGroupOutletRepository.findOutletIdsByMenuGroupId(anyLong()))
+                .thenReturn(List.of());
 
         MenuItemChangedEvent event = new MenuItemChangedEvent(
-                UUID.randomUUID(), null, OutboxEventType.MENU_ITEM_CHANGED,
-                701L, 101L, null, 1L, BigDecimal.valueOf(12), true, true,
-                Instant.parse("2026-01-01T00:00:00Z"), null);
-        lenient().when(menuItemChangedEventFactory.create(anyLong(), anyLong(), anyLong(),
-                any(), any(), any(), any(), any())).thenReturn(event);
+                UUID.randomUUID(),
+                null,
+                OutboxEventType.MENU_ITEM_CHANGED,
+                701L,
+                101L,
+                null,
+                1L,
+                BigDecimal.valueOf(12),
+                true,
+                true,
+                Instant.parse("2026-01-01T00:00:00Z"),
+                null, MenuItemStatus.ACTIVE);
+
+        lenient().when(menuItemChangedEventFactory.create(
+                anyLong(),
+                anyLong(),
+                anyLong(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(MenuItemStatus.class)))
+                .thenReturn(event);
+
         lenient().when(objectMapper.writeValueAsString(any(MenuItemChangedEvent.class)))
                 .thenReturn("{\"itemId\":701}");
     }
@@ -503,6 +534,56 @@ public class MenuItemServiceTest {
     }
 
     @Test
+    void updateMenuItem_statusOnlyUpdate_changesStatus() {
+        MenuItem item = persistedItem(1L);
+        when(restaurantChainRepository.findById(101L)).thenReturn(Optional.of(mock(RestaurantChain.class)));
+        when(menuItemRepository.findByIdAndRestaurantChainId(701L, 101L)).thenReturn(Optional.of(item));
+        when(menuItemRepository.save(item)).thenReturn(item);
+        when(menuGroupOutletRepository.findOutletIdsByMenuGroupId(201L)).thenReturn(List.of(501L));
+
+        service.updateMenuItem(701L, 101L,
+                new MenuItemUpdateRequest(1L, null, null, null, MenuItemStatus.HIDDEN));
+
+        assertEquals(MenuItemStatus.HIDDEN, item.getStatus());
+        verify(menuItemRepository).save(item);
+        verify(menuItemChangedEventFactory).create(anyLong(), anyLong(), anyLong(), any(), any(), any(),
+                anyLong(), any(), eq(MenuItemStatus.HIDDEN));
+        verify(menuItemChangedEventFactory).create(anyLong(), eq(101L), eq(1L), any(), any(), any(),
+                anyLong(), any(), eq(MenuItemStatus.HIDDEN));
+    }
+
+    @Test
+    void updateMenuItem_archivedStatus_reachesEventFactory() {
+        MenuItem item = persistedItem(1L);
+        when(restaurantChainRepository.findById(101L)).thenReturn(Optional.of(mock(RestaurantChain.class)));
+        when(menuItemRepository.findByIdAndRestaurantChainId(701L, 101L)).thenReturn(Optional.of(item));
+        when(menuItemRepository.save(item)).thenReturn(item);
+        when(menuGroupOutletRepository.findOutletIdsByMenuGroupId(201L)).thenReturn(List.of(501L));
+
+        service.updateMenuItem(701L, 101L,
+                new MenuItemUpdateRequest(1L, null, null, null, MenuItemStatus.ARCHIVED));
+
+        verify(menuItemChangedEventFactory).create(anyLong(), anyLong(), anyLong(), any(), any(), any(),
+                anyLong(), any(), eq(MenuItemStatus.ARCHIVED));
+        verify(outboxEventRepository).save(any(OutboxEvent.class));
+    }
+
+    @Test
+    void updateMenuItem_draftItem_reachesEventFactoryWithDraftStatus() {
+        MenuItem item = persistedItem(1L, MenuItemStatus.DRAFT);
+        when(restaurantChainRepository.findById(101L)).thenReturn(Optional.of(mock(RestaurantChain.class)));
+        when(menuItemRepository.findByIdAndRestaurantChainId(701L, 101L)).thenReturn(Optional.of(item));
+        when(menuItemRepository.save(item)).thenReturn(item);
+        when(menuGroupOutletRepository.findOutletIdsByMenuGroupId(201L)).thenReturn(List.of(501L));
+
+        service.updateMenuItem(701L, 101L,
+                new MenuItemUpdateRequest(1L, BigDecimal.valueOf(11), null, null));
+
+        verify(menuItemChangedEventFactory).create(anyLong(), anyLong(), anyLong(), any(), any(), any(),
+                anyLong(), any(), eq(MenuItemStatus.DRAFT));
+    }
+
+    @Test
     void updateMenuItem_multipleFields_updatesAllProvidedValues() {
         MenuItem item = persistedItem(1L);
         when(restaurantChainRepository.findById(101L)).thenReturn(Optional.of(mock(RestaurantChain.class)));
@@ -519,11 +600,70 @@ public class MenuItemServiceTest {
         verify(menuItemRepository).save(item);
     }
 
+    @Test
+    void updateMenuItem_localItem_createsOneEventForOwningOutlet() {
+        MenuItem item = localPersistedItem(1L, 501L);
+        when(restaurantChainRepository.findById(101L)).thenReturn(Optional.of(mock(RestaurantChain.class)));
+        when(menuItemRepository.findByIdAndRestaurantChainId(701L, 101L)).thenReturn(Optional.of(item));
+        when(menuItemRepository.save(item)).thenReturn(item);
+
+        service.updateMenuItem(701L, 101L,
+                new MenuItemUpdateRequest(1L, BigDecimal.valueOf(12), null, null));
+
+        verify(menuGroupOutletRepository, never()).findOutletIdsByMenuGroupId(anyLong());
+        verify(menuItemChangedEventFactory).create(anyLong(), anyLong(), anyLong(), any(), any(), any(),
+                eq(501L), any(), any(MenuItemStatus.class));
+        verify(outboxEventRepository).save(any(OutboxEvent.class));
+    }
+
+    @Test
+    void updateMenuItem_sharedItem_createsOneEventPerAssignedOutlet() {
+        MenuItem item = persistedItem(1L);
+        when(restaurantChainRepository.findById(101L)).thenReturn(Optional.of(mock(RestaurantChain.class)));
+        when(menuItemRepository.findByIdAndRestaurantChainId(701L, 101L)).thenReturn(Optional.of(item));
+        when(menuItemRepository.save(item)).thenReturn(item);
+        when(menuGroupOutletRepository.findOutletIdsByMenuGroupId(201L)).thenReturn(List.of(501L, 502L));
+
+        service.updateMenuItem(701L, 101L,
+                new MenuItemUpdateRequest(1L, BigDecimal.valueOf(12), null, null));
+
+        verify(menuGroupOutletRepository).findOutletIdsByMenuGroupId(201L);
+        verify(menuItemChangedEventFactory).create(anyLong(), anyLong(), anyLong(), any(), any(), any(),
+                eq(501L), any(), any(MenuItemStatus.class));
+        verify(menuItemChangedEventFactory).create(anyLong(), anyLong(), anyLong(), any(), any(), any(),
+                eq(502L), any(), any(MenuItemStatus.class));
+        verify(outboxEventRepository, times(2)).save(any(OutboxEvent.class));
+    }
+
+    @Test
+    void updateMenuItem_sharedItemWithoutAssignedOutlets_createsNoEvent() {
+        MenuItem item = persistedItem(1L);
+        when(restaurantChainRepository.findById(101L)).thenReturn(Optional.of(mock(RestaurantChain.class)));
+        when(menuItemRepository.findByIdAndRestaurantChainId(701L, 101L)).thenReturn(Optional.of(item));
+        when(menuItemRepository.save(item)).thenReturn(item);
+        when(menuGroupOutletRepository.findOutletIdsByMenuGroupId(201L)).thenReturn(List.of());
+
+        service.updateMenuItem(701L, 101L,
+                new MenuItemUpdateRequest(1L, BigDecimal.valueOf(12), null, null));
+
+        verify(outboxEventRepository, never()).save(any(OutboxEvent.class));
+    }
 
     private MenuItem persistedItem(Long version) {
+        return persistedItem(version, MenuItemStatus.ACTIVE);
+    }
+
+    private MenuItem persistedItem(Long version, MenuItemStatus status) {
         Instant now = Instant.parse("2026-01-01T00:00:00Z");
         return new MenuItem(701L, "Burger", BigDecimal.valueOf(10), now,
-                201L, 301L, null, "BURGER-701", MenuItemStatus.ACTIVE,
+                201L, 301L, null, "BURGER-701", status,
+                true, true, version, 101L, now);
+    }
+
+    private MenuItem localPersistedItem(Long version, Long outletId) {
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+        return new MenuItem(701L, "Burger", BigDecimal.valueOf(10), now,
+                null, 301L, outletId, "BURGER-701", MenuItemStatus.ACTIVE,
                 true, true, version, 101L, now);
     }
 

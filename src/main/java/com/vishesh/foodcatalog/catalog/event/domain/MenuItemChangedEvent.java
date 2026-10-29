@@ -4,7 +4,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Immutable message describing the new state of a changed menu item. */
+import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
+
+/** Immutable message carrying a menu-item change from Catalog to Kafka. */
 public final class MenuItemChangedEvent {
     private final UUID eventId;
     private final UUID originalEventId;
@@ -18,10 +20,21 @@ public final class MenuItemChangedEvent {
     private final Boolean visibility;
     private final Instant occurredAt;
     private final String correlationId;
+    private final MenuItemStatus status;
 
-    public MenuItemChangedEvent(UUID eventId, UUID originalEventId, OutboxEventType eventType, Long itemId,
-            Long restaurantChainId, Long outletId, Long aggregateVersion, BigDecimal price, Boolean availability,
-            Boolean visibility, Instant occurredAt, String correlationId) {
+    public MenuItemChangedEvent(UUID eventId,
+            UUID originalEventId,
+            OutboxEventType eventType,
+            Long itemId,
+            Long restaurantChainId,
+            Long outletId,
+            Long aggregateVersion,
+            BigDecimal price,
+            Boolean availability,
+            Boolean visibility,
+            Instant occurredAt,
+            String correlationId,
+            MenuItemStatus status) {
         if (eventId == null) {
             throw new IllegalArgumentException("Event Id cannot be null");
         }
@@ -43,8 +56,12 @@ public final class MenuItemChangedEvent {
         if (price != null && price.signum() < 0) {
             throw new IllegalArgumentException("Price cannot be negative");
         }
-        if (price == null && availability == null && visibility == null) {
+        if (price == null && availability == null && visibility == null && status == null) {
             throw new IllegalArgumentException("At least one changed field is required");
+        }
+
+        if (status == null) {
+            throw new IllegalArgumentException("Status cannot be null");
         }
 
         this.eventId = eventId;
@@ -59,19 +76,58 @@ public final class MenuItemChangedEvent {
         this.visibility = visibility;
         this.occurredAt = occurredAt;
         this.correlationId = correlationId;
+        this.status = status;
     }
 
-    public UUID getEventId() { return eventId; }
-    public UUID getOriginalEventId() { return originalEventId; }
-    public OutboxEventType getEventType() { return eventType; }
-    public Long getItemId() { return itemId; }
-    public Long getRestaurantChainId() { return restaurantChainId; }
-    public Long getOutletId() { return outletId; }
-    public Long getAggregateVersion() { return aggregateVersion; }
-    public BigDecimal getPrice() { return price; }
-    public Boolean getAvailability() { return availability; }
-    public Boolean getVisibility() { return visibility; }
-    public Instant getOccurredAt() { return occurredAt; }
-    public String getCorrelationId() { return correlationId; }
+    public UUID getEventId() {
+        return eventId;
+    }
 
+    public UUID getOriginalEventId() {
+        return originalEventId;
+    }
+
+    public OutboxEventType getEventType() {
+        return eventType;
+    }
+
+    public Long getItemId() {
+        return itemId;
+    }
+
+    public Long getRestaurantChainId() {
+        return restaurantChainId;
+    }
+
+    public Long getOutletId() {
+        return outletId;
+    }
+
+    public Long getAggregateVersion() {
+        return aggregateVersion;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public Boolean getAvailability() {
+        return availability;
+    }
+
+    public Boolean getVisibility() {
+        return visibility;
+    }
+
+    public Instant getOccurredAt() {
+        return occurredAt;
+    }
+
+    public String getCorrelationId() {
+        return correlationId;
+    }
+
+    public MenuItemStatus getStatus() {
+        return status;
+    }
 }
