@@ -27,12 +27,16 @@ public class MenuItemChangedEventFactory {
             Boolean visibility,
             Long outletId,
             String correlationId,
-            MenuItemStatus status) {
+            MenuItemStatus status,
+            String itemName) {
 
         validatePositive(menuItemId, "Menu item id");
         validatePositive(restaurantChainId, "Restaurant chain id");
         validatePositiveWhenPresent(outletId, "Outlet id");
 
+        if (itemName != null && itemName.isBlank()) {
+            throw new IllegalArgumentException("Item name cannot be blank when supplied");
+        }
         return new MenuItemChangedEvent(
                 UUID.randomUUID(),
                 null,
@@ -45,8 +49,9 @@ public class MenuItemChangedEventFactory {
                 availability,
                 visibility,
                 Instant.now(),
-                correlationId,
-                status);
+                correlationId == null ? null : correlationId.trim(),
+                status,
+                itemName == null ? null : itemName.trim());
     }
 
     private static void validatePositive(Long value, String field) {

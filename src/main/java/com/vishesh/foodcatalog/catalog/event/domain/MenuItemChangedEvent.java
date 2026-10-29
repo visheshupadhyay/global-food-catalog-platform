@@ -21,6 +21,7 @@ public final class MenuItemChangedEvent {
     private final Instant occurredAt;
     private final String correlationId;
     private final MenuItemStatus status;
+    private final String itemName;
 
     public MenuItemChangedEvent(UUID eventId,
             UUID originalEventId,
@@ -34,7 +35,8 @@ public final class MenuItemChangedEvent {
             Boolean visibility,
             Instant occurredAt,
             String correlationId,
-            MenuItemStatus status) {
+            MenuItemStatus status,
+            String itemName) {
         if (eventId == null) {
             throw new IllegalArgumentException("Event Id cannot be null");
         }
@@ -64,6 +66,9 @@ public final class MenuItemChangedEvent {
             throw new IllegalArgumentException("Status cannot be null");
         }
 
+        if (itemName != null && itemName.isBlank()) {
+            throw new IllegalArgumentException("Item name cannot be blank when supplied");
+        }
         this.eventId = eventId;
         this.originalEventId = originalEventId;
         this.eventType = eventType;
@@ -77,6 +82,7 @@ public final class MenuItemChangedEvent {
         this.occurredAt = occurredAt;
         this.correlationId = correlationId;
         this.status = status;
+        this.itemName = itemName;
     }
 
     public UUID getEventId() {
@@ -130,4 +136,9 @@ public final class MenuItemChangedEvent {
     public MenuItemStatus getStatus() {
         return status;
     }
+
+    public String getItemName() {
+        return itemName;
+    }
+
 }
