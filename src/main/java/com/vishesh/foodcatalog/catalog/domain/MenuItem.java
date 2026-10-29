@@ -199,6 +199,34 @@ public class MenuItem {
         this.itemPrice = updatedPrice;
     }
 
+    /** Changes the lifecycle state only when the transition is allowed by business rules. */
+    public void updateStatus(MenuItemStatus newStatus) {
+        if (newStatus == null) {
+            throw new IllegalArgumentException("Menu item status cannot be null");
+        }
+
+        if (this.status == newStatus) {
+            return;
+        }
+
+        boolean allowed = switch (this.status) {
+            case DRAFT -> newStatus == MenuItemStatus.ACTIVE;
+            case ACTIVE -> newStatus == MenuItemStatus.HIDDEN
+                    || newStatus == MenuItemStatus.ARCHIVED;
+            case HIDDEN -> newStatus == MenuItemStatus.ACTIVE
+                    || newStatus == MenuItemStatus.ARCHIVED;
+            case ARCHIVED -> false;
+        };
+
+        if (!allowed) {
+            throw new IllegalStateException(
+                    "Cannot change menu item status from " + this.status + " to " + newStatus);
+        }
+
+        this.status = newStatus;
+        this.updatedAt = Instant.now();
+    }
+
     public void updateAvailability(boolean updatedAvailability) {
 
         this.availability = updatedAvailability;

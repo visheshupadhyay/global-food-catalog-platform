@@ -1,6 +1,8 @@
 package com.vishesh.foodcatalog.catalog.application;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import tools.jackson.core.JacksonException;
@@ -14,6 +16,7 @@ import com.vishesh.foodcatalog.catalog.event.application.OutboxEventRepository;
 import com.vishesh.foodcatalog.catalog.event.domain.MenuItemChangedEvent;
 import com.vishesh.foodcatalog.catalog.event.domain.OutboxEvent;
 import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventStatus;
+import com.vishesh.foodcatalog.catalog.repository.MenuGroupOutletRepository;
 import com.vishesh.foodcatalog.catalog.repository.MenuGroupRepository;
 import com.vishesh.foodcatalog.catalog.repository.MenuItemRepository;
 import com.vishesh.foodcatalog.catalog.repository.OutletRepository;
@@ -28,7 +31,7 @@ public class MenuItemService {
     private final RestaurantChainRepository restaurantChainRepository;
     private final OutletRepository outletRepository;
     private final MenuGroupRepository menuGroupRepository;
-
+    private final MenuGroupOutletRepository menuGroupOutletRepository;
     private final MenuItemChangedEventFactory menuItemChangedEventFactory;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
@@ -39,7 +42,8 @@ public class MenuItemService {
             MenuGroupRepository menuGroupRepository,
             MenuItemChangedEventFactory menuItemChangedEventFactory,
             OutboxEventRepository outboxEventRepository,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            MenuGroupOutletRepository menuGroupOutletRepository) {
 
         this.menuItemRepository = menuItemRepository;
         this.restaurantChainRepository = restaurantChainRepository;
@@ -48,6 +52,7 @@ public class MenuItemService {
         this.menuItemChangedEventFactory = menuItemChangedEventFactory;
         this.outboxEventRepository = outboxEventRepository;
         this.objectMapper = objectMapper;
+        this.menuGroupOutletRepository = menuGroupOutletRepository;
     }
 
     public MenuItem findMenuItemById(Long id) {
@@ -133,7 +138,7 @@ public class MenuItemService {
         return menuItemRepository.save(menuItem);
     }
 
-    /** Updates the item and creates its outbox event in the same transaction. */
+    /** Updates the item and creates one outlet event in the same transaction. */
     @Transactional
     public MenuItem updateMenuItem(Long menuItemId, Long restaurantChainId, MenuItemUpdateRequest request) {
         if (menuItemId == null || menuItemId <= 0) {
@@ -180,42 +185,57 @@ public class MenuItemService {
             menuItem.updateVisibility(updatedVisibility);
         }
 
-        MenuItem savedItem = menuItemRepository.save(menuItem);
-        MenuItemChangedEvent menuItemChangedEvent = menuItemChangedEventFactory.create(
-                savedItem.getId(),
-                savedItem.getRestaurantChainId(),
-                savedItem.getVersion(),
-                savedItem.getItemPrice(),
-                savedItem.isAvailability(),
-                savedItem.isVisibility(),
-                savedItem.getOutletId(),
-                null);
-
-        String payload;
-        try {
-            payload = objectMapper.writeValueAsString(menuItemChangedEvent);
-        } catch (JacksonException exception) {
-            throw new IllegalStateException("Could not serialize menu-item change event", exception);
+        if (request.getStatus() != null) {
+            menuItem.updateStatus(request.getStatus());
         }
 
-        OutboxEvent outboxEvent = new OutboxEvent(
-                null,
-                menuItemChangedEvent.getEventId(),
-                menuItemChangedEvent.getOriginalEventId(),
-                menuItemChangedEvent.getEventType(),
-                String.valueOf(savedItem.getId()),
-                payload,
-                OutboxEventStatus.PENDING,
-                0L,
-                null,
-                null,
-                menuItemChangedEvent.getOccurredAt(),
-                null,
-                null,
-                savedItem.getId(),
-                savedItem.getVersion());
+        MenuItem savedItem = menuItemRepository.save(menuItem);
+        List<Long> outletIds = new ArrayList<>();
+        if (savedItem.getOutletId() != null) {
+            outletIds.add(savedItem.getOutletId());
+        }
+        else {
+            outletIds = menuGroupOutletRepository.findOutletIdsByMenuGroupId(savedItem.getMenuGroupId());
+        }
 
-        outboxEventRepository.save(outboxEvent);
+        for (Long outletId: outletIds) {
+            MenuItemChangedEvent menuItemChangedEvent = menuItemChangedEventFactory.create(
+                    savedItem.getId(),
+                    savedItem.getRestaurantChainId(),
+                    savedItem.getVersion(),
+                    savedItem.getItemPrice(),
+                    savedItem.isAvailability(),
+                    savedItem.isVisibility(),
+                    outletId,
+                    null,
+                    savedItem.getStatus());
+
+            String payload;
+            try {
+                payload = objectMapper.writeValueAsString(menuItemChangedEvent);
+            } catch (JacksonException exception) {
+                throw new IllegalStateException("Could not serialize menu-item change event", exception);
+            }
+
+            OutboxEvent outboxEvent = new OutboxEvent(
+                    null,
+                    menuItemChangedEvent.getEventId(),
+                    menuItemChangedEvent.getOriginalEventId(),
+                    menuItemChangedEvent.getEventType(),
+                    String.valueOf(savedItem.getId()),
+                    payload,
+                    OutboxEventStatus.PENDING,
+                    0L,
+                    null,
+                    null,
+                    menuItemChangedEvent.getOccurredAt(),
+                    null,
+                    null,
+                    savedItem.getId(),
+                    savedItem.getVersion());
+
+            outboxEventRepository.save(outboxEvent);
+        }
         return savedItem;
 
     }

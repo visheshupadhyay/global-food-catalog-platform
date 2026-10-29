@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -25,6 +27,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.mockito.ArgumentCaptor;
 
 import com.vishesh.foodcatalog.TestcontainersConfiguration;
 import com.vishesh.foodcatalog.catalog.application.MenuItemService;
@@ -322,6 +325,15 @@ class CatalogSchemaIntegrationTest {
                 "Burger", BigDecimal.valueOf(10), menuGroupId, businessCode,
                 MenuItemStatus.ACTIVE.name(), 1L, insertedRestaurantChainId);
 
+        Long outletId = jdbcTemplate.queryForObject(
+                "insert into outlet (display_name,currency, outlet_code, restaurant_chain_id, status) "
+                        + "values (?,?, ?, ?, ?) returning id",
+                Long.class, "Berlin Mitte", "EUR", "BERLIN-" + UUID.randomUUID(),
+                insertedRestaurantChainId, ChainStatus.DRAFT.name());
+
+        jdbcTemplate.update(
+                "insert into menu_group_outlet (menu_group_id, outlet_id) values (?, ?)",
+                menuGroupId, outletId);
         Long menuItemId = jdbcTemplate.queryForObject(
                 "select id from menu_item where business_code = ?",
                 Long.class, businessCode);
@@ -344,6 +356,102 @@ class CatalogSchemaIntegrationTest {
         Integer outboxRowsAfter = jdbcTemplate.queryForObject(
                 "select count(*) from outbox_event", Integer.class);
         assertEquals(outboxRowsBefore, outboxRowsAfter);
+    }
+
+    @Test
+    void menuItemStatusUpdate_persistsStatusAndOutboxPayload() {
+        insertedBusinessCode = "STATUS-TEST-" + UUID.randomUUID();
+        jdbcTemplate.update(
+                "insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "Status Test Chain", insertedBusinessCode);
+        insertedRestaurantChainId = jdbcTemplate.queryForObject(
+                "select id from restaurant_chain where business_code = ?",
+                Long.class, insertedBusinessCode);
+
+        jdbcTemplate.update(
+                "insert into menu_group (display_name, restaurant_chain_id, status) values (?, ?, ?)",
+                "Burgers", insertedRestaurantChainId, ChainStatus.ACTIVE.name());
+        Long menuGroupId = jdbcTemplate.queryForObject(
+                "select id from menu_group where restaurant_chain_id = ?",
+                Long.class, insertedRestaurantChainId);
+        Long outletId = jdbcTemplate.queryForObject(
+                "insert into outlet (display_name, currency, outlet_code, restaurant_chain_id, status) "
+                        + "values (?, ?, ?, ?, ?) returning id",
+                Long.class, "Berlin Mitte", "EUR", "STATUS-OUTLET-" + UUID.randomUUID(),
+                insertedRestaurantChainId, ChainStatus.DRAFT.name());
+        jdbcTemplate.update(
+                "insert into menu_group_outlet (menu_group_id, outlet_id) values (?, ?)",
+                menuGroupId, outletId);
+
+        String itemCode = "STATUS-ITEM-" + UUID.randomUUID();
+        jdbcTemplate.update(
+                "insert into menu_item (item_name, item_price, created_at, menu_group_id, "
+                        + "menu_category_id, outlet_id, business_code, status, visibility, availability, "
+                        + "version, restaurant_chain_id, updated_at) "
+                        + "values (?, ?, current_timestamp, ?, null, null, ?, ?, true, true, ?, ?, current_timestamp)",
+                "Burger", BigDecimal.TEN, menuGroupId, itemCode,
+                MenuItemStatus.ACTIVE.name(), 1L, insertedRestaurantChainId);
+        Long itemId = jdbcTemplate.queryForObject(
+                "select id from menu_item where business_code = ?", Long.class, itemCode);
+
+        menuItemService.updateMenuItem(itemId, insertedRestaurantChainId,
+                new MenuItemUpdateRequest(1L, null, null, null, MenuItemStatus.HIDDEN));
+
+        assertEquals(MenuItemStatus.HIDDEN.name(), jdbcTemplate.queryForObject(
+                "select status from menu_item where id = ?", String.class, itemId));
+        assertEquals(2L, jdbcTemplate.queryForObject(
+                "select version from menu_item where id = ?", Long.class, itemId));
+        ArgumentCaptor<OutboxEvent> eventCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxEventRepository).save(eventCaptor.capture());
+        org.junit.jupiter.api.Assertions.assertTrue(eventCaptor.getValue().getPayload().contains("HIDDEN"));
+    }
+
+    @Test
+    void sharedMenuItemUpdate_createsOneOutboxEventPerAssignedOutlet() {
+        insertedBusinessCode = "FANOUT-CHAIN-" + UUID.randomUUID();
+        jdbcTemplate.update(
+                "insert into restaurant_chain (display_name, business_code) values (?, ?)",
+                "Fanout Test Chain", insertedBusinessCode);
+        insertedRestaurantChainId = jdbcTemplate.queryForObject(
+                "select id from restaurant_chain where business_code = ?",
+                Long.class, insertedBusinessCode);
+
+        jdbcTemplate.update(
+                "insert into menu_group (display_name, restaurant_chain_id, status) values (?, ?, ?)",
+                "Burgers", insertedRestaurantChainId, ChainStatus.ACTIVE.name());
+        Long menuGroupId = jdbcTemplate.queryForObject(
+                "select id from menu_group where restaurant_chain_id = ?",
+                Long.class, insertedRestaurantChainId);
+
+        String businessCode = "FANOUT-ITEM-" + UUID.randomUUID();
+        jdbcTemplate.update(
+                "insert into menu_item (item_name, item_price, created_at, menu_group_id, "
+                        + "menu_category_id, outlet_id, business_code, status, visibility, availability, "
+                        + "version, restaurant_chain_id, updated_at) "
+                        + "values (?, ?, current_timestamp, ?, null, null, ?, ?, true, true, ?, ?, current_timestamp)",
+                "Burger", BigDecimal.valueOf(10), menuGroupId, businessCode,
+                MenuItemStatus.ACTIVE.name(), 1L, insertedRestaurantChainId);
+
+        Long menuItemId = jdbcTemplate.queryForObject(
+                "select id from menu_item where business_code = ?", Long.class, businessCode);
+
+        for (int index = 1; index <= 3; index++) {
+            Long outletId = jdbcTemplate.queryForObject(
+                    "insert into outlet (display_name, currency, outlet_code, restaurant_chain_id, status) "
+                            + "values (?, ?, ?, ?, ?) returning id",
+                    Long.class, "Outlet " + index, "EUR", "FANOUT-OUTLET-" + UUID.randomUUID(),
+                    insertedRestaurantChainId, ChainStatus.DRAFT.name());
+            jdbcTemplate.update(
+                    "insert into menu_group_outlet (menu_group_id, outlet_id) values (?, ?)",
+                    menuGroupId, outletId);
+        }
+
+        menuItemService.updateMenuItem(
+                menuItemId,
+                insertedRestaurantChainId,
+                new MenuItemUpdateRequest(1L, BigDecimal.valueOf(12), null, null));
+
+        verify(outboxEventRepository, times(3)).save(any(OutboxEvent.class));
     }
 
     @Test

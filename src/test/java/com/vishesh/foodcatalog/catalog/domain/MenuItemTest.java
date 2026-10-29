@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
@@ -86,5 +87,59 @@ public class MenuItemTest {
 
         assertEquals("bh-ge-101", menuItem.getBusinessCode());
         assertEquals("Mc veg", menuItem.getItemName());
+    }
+
+    @Test
+    void draftItem_canBecomeActive() {
+        MenuItem item = persisted(MenuItemStatus.DRAFT);
+
+        item.updateStatus(MenuItemStatus.ACTIVE);
+
+        assertEquals(MenuItemStatus.ACTIVE, item.getStatus());
+        assertNotNull(item.getUpdatedAt());
+    }
+
+    @Test
+    void activeItem_canBecomeHiddenOrArchived() {
+        MenuItem hidden = persisted(MenuItemStatus.ACTIVE);
+        hidden.updateStatus(MenuItemStatus.HIDDEN);
+        assertEquals(MenuItemStatus.HIDDEN, hidden.getStatus());
+
+        MenuItem archived = persisted(MenuItemStatus.ACTIVE);
+        archived.updateStatus(MenuItemStatus.ARCHIVED);
+        assertEquals(MenuItemStatus.ARCHIVED, archived.getStatus());
+    }
+
+    @Test
+    void hiddenItem_canBecomeActiveOrArchived() {
+        MenuItem active = persisted(MenuItemStatus.HIDDEN);
+        active.updateStatus(MenuItemStatus.ACTIVE);
+        assertEquals(MenuItemStatus.ACTIVE, active.getStatus());
+
+        MenuItem archived = persisted(MenuItemStatus.HIDDEN);
+        archived.updateStatus(MenuItemStatus.ARCHIVED);
+        assertEquals(MenuItemStatus.ARCHIVED, archived.getStatus());
+    }
+
+    @Test
+    void archivedItem_cannotChangeStatus() {
+        MenuItem item = persisted(MenuItemStatus.ARCHIVED);
+
+        assertThrows(IllegalStateException.class,
+                () -> item.updateStatus(MenuItemStatus.ACTIVE));
+    }
+
+    @Test
+    void nullStatus_isRejected() {
+        MenuItem item = persisted(MenuItemStatus.ACTIVE);
+
+        assertThrows(IllegalArgumentException.class, () -> item.updateStatus(null));
+    }
+
+    private MenuItem persisted(MenuItemStatus status) {
+        Instant now = Instant.parse("2026-01-01T00:00:00Z");
+        return new MenuItem(701L, "Burger", BigDecimal.TEN, now,
+                201L, 301L, null, "BURGER-701", status,
+                true, true, 1L, 101L, now);
     }
 }
