@@ -616,3 +616,70 @@ An empty override therefore inherits every base value. A base item hidden or arc
 
 **Reason:** visibility and lifecycle status control whether an item should appear, while availability communicates ordering state to customers.
 
+## 13. Confirmed read-path hardening decisions
+
+### D-090 - Measure the PostgreSQL read path before caching
+
+**Decision:** establish a repeatable PostgreSQL-backed customer-menu benchmark before
+claiming that Redis improves performance.
+
+**Rule:** compare sequential and concurrent requests using the same outlet data, request
+shape, and load profile. Record average latency, P95, P99, throughput, and failures.
+
+**Reason:** performance changes must be measured against a known baseline rather than
+assumed from the presence of a cache.
+
+### D-091 - Redis is a read-through serving cache
+
+**Decision:** use Redis as a read-through cache in front of the Effective Menu Service
+read-model database.
+
+**Rule:** a cache hit returns the snapshot; a cache miss reads PostgreSQL, returns the
+committed snapshot, and then stores it in Redis. Redis is never the source of truth.
+
+### D-092 - Outlet-scoped Redis keys
+
+**Decision:** cache keys use the format `effective-menu:outlet:{outletId}`.
+
+**Reason:** every outlet must have an isolated cache entry, and one deterministic key
+builder prevents different components from reading and writing different key formats.
+
+### D-093 - Time-to-live protects against forgotten invalidation
+
+**Decision:** cached snapshots have a configurable TTL, initially 60 seconds.
+
+**Rule:** TTL is a safety net, not the primary freshness mechanism. Event processing
+evicts the affected outlet key immediately after the snapshot update.
+
+### D-094 - Lazy cache refresh after invalidation
+
+**Decision:** after an effective-menu snapshot changes, evict the old Redis entry and
+let the next customer request repopulate it from the committed PostgreSQL snapshot.
+
+**Reason:** writing to Redis inside the event transaction could expose data that later
+rolls back. Lazy refresh keeps PostgreSQL commit order authoritative.
+
+### D-095 - Cache failures do not replace the read model
+
+**Decision:** Redis is optional infrastructure. Cache misses, expiry, or disabled-cache
+configuration fall back to the Effective Menu Service PostgreSQL read model.
+
+**Rule:** a cache outage must not make the source read model unavailable; cache errors
+must not be treated as successful database writes.
+
+### D-096 - Response payload size is a measured capacity limit
+
+**Decision:** benchmark results showed that larger effective-menu JSON responses reduce
+throughput and increase network transfer. Payload size is tracked as part of capacity
+testing alongside database and application metrics.
+
+**Reason:** the one-item and 50-item comparisons showed the database was not saturated,
+while response size materially changed throughput.
+
+### D-097 - HTTP compression remains opt-in
+
+**Decision:** JSON compression is configurable but disabled by default for the baseline.
+
+**Reason:** local testing reduced transferred bytes with gzip but increased CPU and
+latency. Compression will be reconsidered with production-like CPU and network limits.
+
