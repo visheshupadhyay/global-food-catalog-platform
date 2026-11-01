@@ -150,7 +150,28 @@ class OutboxEventReplayServiceTest {
         assertEquals(OutboxEventStatus.PENDING, captor.getValue().getStatus());
     }
 
+    @Test
+    void replay_dlqEvent_createsFreshPendingAttemptWithoutChangingDlqRecord() {
+        OutboxEvent original = eventWithStatus(OutboxEventStatus.DLQ);
+        when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
+        when(repository.save(any(OutboxEvent.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        OutboxEvent replay = service.replay(original.getEventId());
+
+        assertNotEquals(original.getEventId(), replay.getEventId());
+        assertEquals(original.getEventId(), replay.getOriginalEventId());
+        assertEquals(OutboxEventStatus.PENDING, replay.getStatus());
+        assertEquals(0L, replay.getRetryCount());
+        assertEquals(OutboxEventStatus.DLQ, original.getStatus());
+        assertEquals(2L, original.getRetryCount());
+    }
+
     private OutboxEvent existingFailedEvent() {
+        return eventWithStatus(OutboxEventStatus.FAILED);
+    }
+
+    private OutboxEvent eventWithStatus(OutboxEventStatus status) {
         return new OutboxEvent(
                 55L,
                 UUID.randomUUID(),
@@ -158,7 +179,7 @@ class OutboxEventReplayServiceTest {
                 OutboxEventType.MENU_ITEM_CHANGED,
                 "101",
                 "{\"itemId\":101,\"price\":12.50}",
-                OutboxEventStatus.FAILED,
+                status,
                 2L,
                 Instant.parse("2026-01-01T10:00:00Z"),
                 "broker unavailable",

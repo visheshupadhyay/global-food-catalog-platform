@@ -75,6 +75,36 @@ class OutboxDeliveryServiceTest {
     }
 
     @Test
+    void deliver_afterTemporaryFailure_thenRecovery_marksEventPublished() {
+        OutboxEvent firstAttempt = event(0L);
+        doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(firstAttempt);
+
+        service.deliver(firstAttempt);
+
+        verify(repository).recordFailure(
+                firstAttempt.getId(), OutboxEventStatus.PENDING, 1L,
+                "Kafka unavailable", NOW.plusSeconds(60), NOW);
+
+        OutboxEvent retryAttempt = event(firstAttempt.getEventId(), 1L);
+        service.deliver(retryAttempt);
+
+        verify(publisher).publish(retryAttempt);
+        verify(repository).markPublished(retryAttempt.getId(), NOW);
+    }
+
+    @Test
+    void deliver_whenPublishFailsAgain_usesLongerBackoff() {
+        OutboxEvent event = event(1L);
+        doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(event);
+
+        service.deliver(event);
+
+        verify(repository).recordFailure(
+                event.getId(), OutboxEventStatus.PENDING, 2L,
+                "Kafka unavailable", NOW.plusSeconds(120), NOW);
+    }
+
+    @Test
     void deliver_whenLastRetryFails_movesEventToDlq() {
         OutboxEvent event = event(4L);
         doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(event);
@@ -84,6 +114,20 @@ class OutboxDeliveryServiceTest {
         verify(repository).recordFailure(
                 event.getId(), OutboxEventStatus.DLQ, 5L,
                 "Kafka unavailable", null, NOW);
+    }
+
+    @Test
+    void deliver_whenRetryLimitIsExhausted_doesNotMarkEventPublished() {
+        OutboxEvent event = event(4L);
+        doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(event);
+
+        service.deliver(event);
+
+        verify(repository).recordFailure(
+                event.getId(), OutboxEventStatus.DLQ, 5L,
+                "Kafka unavailable", null, NOW);
+        verify(repository, never()).markPublished(
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any());
     }
 
     @Test
@@ -106,9 +150,13 @@ class OutboxDeliveryServiceTest {
     }
 
     private OutboxEvent event(long retryCount) {
+        return event(UUID.randomUUID(), retryCount);
+    }
+
+    private OutboxEvent event(UUID eventId, long retryCount) {
         return new OutboxEvent(
                 101L,
-                UUID.randomUUID(),
+                eventId,
                 null,
                 OutboxEventType.MENU_ITEM_CHANGED,
                 "menu-item-701",

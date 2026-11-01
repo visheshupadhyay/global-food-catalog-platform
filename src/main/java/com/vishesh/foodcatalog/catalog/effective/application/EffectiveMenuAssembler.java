@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
 import com.vishesh.foodcatalog.catalog.effective.domain.BaseMenuItemSnapshot;
@@ -28,7 +29,7 @@ public class EffectiveMenuAssembler {
 
     private final EffectiveMenuResolver effectiveMenuResolver;
 
-    public EffectiveMenuAssembler(EffectiveMenuResolver effectiveMenuResolver) {
+    public EffectiveMenuAssembler(@Qualifier("defaultEffectiveMenuResolver") EffectiveMenuResolver effectiveMenuResolver) {
         if (effectiveMenuResolver == null) {
             throw new IllegalArgumentException("Effective menu resolver must be present");
         }

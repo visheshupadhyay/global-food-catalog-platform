@@ -19,7 +19,7 @@ import com.vishesh.foodcatalog.catalog.effective.persistence.projection.OutletOv
 import com.vishesh.foodcatalog.catalog.effective.persistence.projection.OutletStatusProjection;
 import com.vishesh.foodcatalog.catalog.effective.persistence.repository.EffectiveMenuJpaReadRepository;
 
-@Component
+@Component("postgresEffectiveMenuDataProvider")
 /** Reads only the small set of rows needed to calculate one outlet's menu. */
 public class PostgresEffectiveMenuDataProvider implements EffectiveMenuDataProvider {
     private final EffectiveMenuJpaReadRepository effectiveMenuJpaReadRepository;

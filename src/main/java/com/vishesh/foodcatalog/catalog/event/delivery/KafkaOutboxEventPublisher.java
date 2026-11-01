@@ -10,7 +10,8 @@ import com.vishesh.foodcatalog.catalog.event.application.OutboxEventPublisher;
 import com.vishesh.foodcatalog.catalog.event.domain.OutboxEvent;
 
 /** Sends an outbox payload to Kafka and reports delivery failures to the retry service. */
-@Component
+@Component("kafkaOutboxEventPublisher")
+/** Sends one durable outbox event to Kafka and waits for broker acknowledgement. */
 public class KafkaOutboxEventPublisher implements OutboxEventPublisher {
 
     private final KafkaTemplate<String, String> kafkaTemplate;

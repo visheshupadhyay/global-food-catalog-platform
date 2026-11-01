@@ -17,7 +17,8 @@ import com.vishesh.foodcatalog.catalog.repository.RestaurantChainRepository;
 public class RestaurantChainService {
     private final RestaurantChainRepository repository;
 
-    public RestaurantChainService(RestaurantChainRepository repository) {
+    public RestaurantChainService(
+            @org.springframework.beans.factory.annotation.Qualifier("restaurantChainPersistenceAdapter") RestaurantChainRepository repository) {
         this.repository = repository;
     }
 

@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -45,33 +45,32 @@ class OutboxDeliveryWorkerTest {
     }
 
     @Test
-    void runOnce_loadsPendingEventsUsingCurrentTimeAndBatchSize() {
-        OutboxDeliveryWorker worker = worker(25);
-        when(repository.findPendingEvents(NOW, 25)).thenReturn(List.of());
+    void runOnce_claimsOnePendingEventUsingCurrentTime() {
+        OutboxDeliveryWorker worker = worker(1);
+        OutboxEvent pendingEvent = event(1L);
+        when(repository.claimNextPendingEvent(NOW)).thenReturn(Optional.of(pendingEvent));
 
         worker.runOnce();
 
-        verify(repository).findPendingEvents(NOW, 25);
-        verifyNoInteractions(deliveryService);
+        verify(repository).claimNextPendingEvent(NOW);
+        verify(deliveryService).deliver(pendingEvent);
     }
 
     @Test
-    void runOnce_deliversEveryLoadedEvent() {
-        OutboxDeliveryWorker worker = worker(100);
+    void runOnce_deliversClaimedEvent() {
+        OutboxDeliveryWorker worker = worker(1);
         OutboxEvent first = event(1L);
-        OutboxEvent second = event(2L);
-        when(repository.findPendingEvents(NOW, 100)).thenReturn(List.of(first, second));
+        when(repository.claimNextPendingEvent(NOW)).thenReturn(Optional.of(first));
 
         worker.runOnce();
 
         verify(deliveryService).deliver(first);
-        verify(deliveryService).deliver(second);
     }
 
     @Test
     void runOnce_whenNoPendingEvents_doesNotDeliverAnything() {
-        OutboxDeliveryWorker worker = worker(100);
-        when(repository.findPendingEvents(NOW, 100)).thenReturn(List.of());
+        OutboxDeliveryWorker worker = worker(1);
+        when(repository.claimNextPendingEvent(NOW)).thenReturn(Optional.empty());
 
         worker.runOnce();
 
@@ -79,18 +78,16 @@ class OutboxDeliveryWorkerTest {
     }
 
     @Test
-    void runOnce_whenOneEventFails_continuesWithRemainingEvents() {
-        OutboxDeliveryWorker worker = worker(100);
+    void runOnce_whenClaimedEventFails_doesNotPropagateException() {
+        OutboxDeliveryWorker worker = worker(1);
         OutboxEvent first = event(1L);
-        OutboxEvent second = event(2L);
-        when(repository.findPendingEvents(NOW, 100)).thenReturn(List.of(first, second));
+        when(repository.claimNextPendingEvent(NOW)).thenReturn(Optional.of(first));
         doThrow(new RuntimeException("unexpected failure"))
                 .when(deliveryService).deliver(first);
 
         worker.runOnce();
 
         verify(deliveryService).deliver(first);
-        verify(deliveryService).deliver(second);
     }
 
     @Test
@@ -131,6 +128,16 @@ class OutboxDeliveryWorkerTest {
                 () -> new OutboxDeliveryWorker(repository, deliveryService, null, 100));
     }
 
+    @Test
+    void runOnce_recoversStaleEventsBeforeClaiming() {
+        when(repository.claimNextPendingEvent(NOW)).thenReturn(Optional.empty());
+
+        worker(1).runOnce();
+
+        verify(repository).recoverStaleProcessingEvents(NOW.minusSeconds(60));
+        verify(repository).claimNextPendingEvent(NOW);
+        verifyNoInteractions(deliveryService);
+    }
     private OutboxDeliveryWorker worker(int batchSize) {
         return new OutboxDeliveryWorker(repository, deliveryService, clock, batchSize);
     }

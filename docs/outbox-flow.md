@@ -68,3 +68,41 @@ the original failure.
 Redis is a derived read cache. PostgreSQL and the outbox are durable first. Redis is
 updated or invalidated only after the downstream read model processes the Kafka event;
 it is never a write-behind source of truth.
+
+## Operator recovery guide
+
+### Check delivery state
+
+```sql
+SELECT id, event_id, status, retry_count, next_attempt_at, last_error
+FROM outbox_event
+ORDER BY id DESC;
+```
+
+`PENDING` waits for delivery or retry, `PROCESSING` is currently claimed, `PUBLISHED`
+was acknowledged by Kafka, and `DLQ` requires operator investigation.
+
+### Replay a DLQ event
+
+Replay only after fixing the underlying problem. Replay creates a new event ID, stores
+the failed event ID as `originalEventId`, resets the retry count, and starts as `PENDING`.
+The original DLQ row is never modified.
+
+### Reconcile a menu item
+
+```text
+GET /api/v1/reconciliation/menu-items/{menuItemId}/outlets/{outletId}
+```
+
+The result identifies a matching, missing, stale, or mismatched snapshot. Reconciliation
+diagnoses drift; it does not patch the read model directly.
+
+### Check propagation health
+
+```text
+GET /actuator/outbox
+GET /actuator/effective-menu
+```
+
+These endpoints expose pending/retry/DLQ counts, consumer failures, duplicate and stale
+events, processed events, and propagation lag.
