@@ -27,7 +27,9 @@ public class MenuItemPersistenceAdapter implements MenuItemRepository {
     @Override
     public MenuItem save(MenuItem menuItem) {
         MenuItemEntity entity = mapper.toEntity(menuItem);
-        MenuItemEntity savedEntity = repository.save(entity);
+        // Flush immediately so JPA assigns the new optimistic-lock version
+        // before the service creates the outbox event.
+        MenuItemEntity savedEntity = repository.saveAndFlush(entity);
         return mapper.toDomain(savedEntity);
     }
 

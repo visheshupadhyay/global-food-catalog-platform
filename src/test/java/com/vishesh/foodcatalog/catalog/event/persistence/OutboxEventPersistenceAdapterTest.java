@@ -105,6 +105,36 @@ class OutboxEventPersistenceAdapterTest {
     }
 
     @Test
+    void claimNextPendingEvent_marksEventProcessingAndStoresClaimTime() {
+        Instant now = Instant.parse("2026-01-01T12:00:00Z");
+        OutboxEventEntity entity = entity(9L, UUID.randomUUID(), OutboxEventStatus.PENDING, 0L, null);
+        when(repository.findDueBatch(any(), any(), any())).thenReturn(List.of(entity));
+        when(repository.save(entity)).thenReturn(entity);
+
+        Optional<OutboxEvent> result = adapter.claimNextPendingEvent(now);
+
+        assertEquals(OutboxEventStatus.PROCESSING, entity.getStatus());
+        assertEquals(now, entity.getProcessingStartedAt());
+        assertEquals(OutboxEventStatus.PROCESSING, result.orElseThrow().getStatus());
+        verify(repository).save(entity);
+    }
+
+    @Test
+    void claimNextPendingEvent_whenNoPendingEvent_returnsEmpty() {
+        Instant now = Instant.parse("2026-01-01T12:00:00Z");
+        when(repository.findDueBatch(any(), any(), any())).thenReturn(List.of());
+
+        assertEquals(Optional.empty(), adapter.claimNextPendingEvent(now));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void claimNextPendingEvent_rejectsNullTime() {
+        assertThrows(IllegalArgumentException.class, () -> adapter.claimNextPendingEvent(null));
+        verify(repository, never()).findDueBatch(any(), any(), any());
+    }
+
+    @Test
     void markPublished_updatesStatusAndTimestamp() {
         OutboxEventEntity entity = entity(9L, UUID.randomUUID(), OutboxEventStatus.PENDING, 0L, null);
         Instant publishedAt = Instant.parse("2026-01-01T12:00:00Z");
@@ -153,6 +183,19 @@ class OutboxEventPersistenceAdapterTest {
         assertThrows(IllegalArgumentException.class, () -> adapter.markFailed(9L, " ", null, Instant.now()));
         assertThrows(IllegalArgumentException.class, () -> adapter.markFailed(9L, "timeout", null, null));
         verify(repository, never()).findById(any());
+    }
+
+    @Test
+    void recoverStaleProcessingEvents_returnsNumberOfRecoveredRows() {
+        Instant cutOff = Instant.now();
+        when(repository.recoverStaleProcessingEvents(cutOff)).thenReturn(2);
+        assertEquals(2, adapter.recoverStaleProcessingEvents(cutOff));
+        verify(repository).recoverStaleProcessingEvents(cutOff);
+    }
+
+    @Test
+    void recoverStaleProcessingEvents_rejectsNullCutoff() {
+        assertThrows(IllegalArgumentException.class, () -> adapter.recoverStaleProcessingEvents(null));
     }
 
     private static OutboxEvent event(Long id, OutboxEventStatus status, Long retryCount,

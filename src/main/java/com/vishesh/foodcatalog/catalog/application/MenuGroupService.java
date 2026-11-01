@@ -1,5 +1,6 @@
 package com.vishesh.foodcatalog.catalog.application;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import com.vishesh.foodcatalog.catalog.api.MenuGroupUpdateRequest;
 import com.vishesh.foodcatalog.catalog.domain.MenuGroup;
@@ -12,7 +13,9 @@ public class MenuGroupService {
     private final MenuGroupRepository repository;
     private final RestaurantChainRepository restaurantChainRepository;
 
-    public MenuGroupService(MenuGroupRepository repository, RestaurantChainRepository restaurantChainRepository) {
+    public MenuGroupService(
+            @Qualifier("menuGroupPersistenceAdapter") MenuGroupRepository repository,
+            @Qualifier("restaurantChainPersistenceAdapter") RestaurantChainRepository restaurantChainRepository) {
         this.repository = repository;
         this.restaurantChainRepository = restaurantChainRepository;
     }

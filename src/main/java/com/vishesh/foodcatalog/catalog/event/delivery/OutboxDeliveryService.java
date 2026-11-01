@@ -6,6 +6,7 @@ import java.time.Duration;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 
 import com.vishesh.foodcatalog.catalog.event.application.OutboxEventPublisher;
@@ -23,7 +24,7 @@ public class OutboxDeliveryService {
     private final Long maxRetries;
 
     public OutboxDeliveryService(OutboxEventRepository outboxEventRepository, 
-        OutboxEventPublisher outboxEventPublisher,
+        @Qualifier("kafkaOutboxEventPublisher") OutboxEventPublisher outboxEventPublisher,
         Clock clock,
         @Value("${catalog.outbox.max-retries}") Long maxRetries) {
 

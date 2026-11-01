@@ -37,6 +37,7 @@ class OutboxEventMapperTest {
         assertEquals(domain.getCreatedTimestamp(), entity.getCreatedTimestamp());
         assertEquals(domain.getPublishedTimestamp(), entity.getPublishedTimestamp());
         assertEquals(domain.getFailedTimestamp(), entity.getFailedTimestamp());
+        assertEquals(domain.getProcessingStartedAt(), entity.getProcessingStartedAt());
     }
 
     @Test
@@ -75,6 +76,7 @@ class OutboxEventMapperTest {
         assertEquals(entity.getCreatedTimestamp(), domain.getCreatedTimestamp());
         assertEquals(entity.getPublishedTimestamp(), domain.getPublishedTimestamp());
         assertEquals(entity.getFailedTimestamp(), domain.getFailedTimestamp());
+        assertEquals(entity.getProcessingStartedAt(), domain.getProcessingStartedAt());
     }
 
     @Test
@@ -103,6 +105,7 @@ class OutboxEventMapperTest {
                 null,
                 Instant.parse("2026-01-01T10:00:05Z"),
                 101L,
-                4L);
+                4L,
+                Instant.parse("2026-01-01T10:00:10Z"));
     }
 }

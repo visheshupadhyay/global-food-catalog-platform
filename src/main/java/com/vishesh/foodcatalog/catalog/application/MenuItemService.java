@@ -36,14 +36,15 @@ public class MenuItemService {
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
 
-    public MenuItemService(MenuItemRepository menuItemRepository,
-            RestaurantChainRepository restaurantChainRepository,
-            OutletRepository outletRepository,
-            MenuGroupRepository menuGroupRepository,
+    public MenuItemService(
+            @org.springframework.beans.factory.annotation.Qualifier("menuItemPersistenceAdapter") MenuItemRepository menuItemRepository,
+            @org.springframework.beans.factory.annotation.Qualifier("restaurantChainPersistenceAdapter") RestaurantChainRepository restaurantChainRepository,
+            @org.springframework.beans.factory.annotation.Qualifier("outletPersistenceAdapter") OutletRepository outletRepository,
+            @org.springframework.beans.factory.annotation.Qualifier("menuGroupPersistenceAdapter") MenuGroupRepository menuGroupRepository,
             MenuItemChangedEventFactory menuItemChangedEventFactory,
-            OutboxEventRepository outboxEventRepository,
+            @org.springframework.beans.factory.annotation.Qualifier("outboxEventPersistenceAdapter") OutboxEventRepository outboxEventRepository,
             ObjectMapper objectMapper,
-            MenuGroupOutletRepository menuGroupOutletRepository) {
+            @org.springframework.beans.factory.annotation.Qualifier("menuGroupOutletPersistenceAdapter") MenuGroupOutletRepository menuGroupOutletRepository) {
 
         this.menuItemRepository = menuItemRepository;
         this.restaurantChainRepository = restaurantChainRepository;

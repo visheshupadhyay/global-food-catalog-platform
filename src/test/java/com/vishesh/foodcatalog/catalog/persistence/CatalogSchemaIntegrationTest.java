@@ -13,6 +13,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -37,6 +39,7 @@ import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
 import com.vishesh.foodcatalog.catalog.domain.RestaurantChain;
 import com.vishesh.foodcatalog.catalog.event.application.OutboxEventRepository;
 import com.vishesh.foodcatalog.catalog.event.domain.OutboxEvent;
+import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventStatus;
 import com.vishesh.foodcatalog.catalog.persistence.adapter.MenuItemPersistenceAdapter;
 import com.vishesh.foodcatalog.catalog.persistence.adapter.RestaurantChainPersistenceAdapter;
 import com.vishesh.foodcatalog.catalog.persistence.entity.MenuGroupEntity;
@@ -52,7 +55,7 @@ import jakarta.persistence.EntityManager;
 @Import(TestcontainersConfiguration.class)
 class CatalogSchemaIntegrationTest {
 
-    private static final int EXPECTED_MIGRATION_COUNT = 10;
+    private static final int EXPECTED_MIGRATION_COUNT = 11;
     private static final Long UNKNOWN_CHAIN_ID = 999999999L;
 
     @Autowired
@@ -848,6 +851,24 @@ class CatalogSchemaIntegrationTest {
                         insertedRestaurantChainId));
 
         assertTrue(exception.getMessage().contains("menu_item_outlet_chain_fk"));
+    }
+
+    @Test
+    void outboxEvent_processingStatusAndTimestampArePersisted() {
+        Instant processingStartedAt = Instant.parse("2026-01-01T10:00:10Z");
+        jdbcTemplate.update(
+                "insert into outbox_event (name, status, processing_started_at) values (?, ?, ?)",
+                "PROCESSING-TEST-" + UUID.randomUUID(),
+                OutboxEventStatus.PROCESSING.name(),
+                Timestamp.from(processingStartedAt));
+
+        var row = jdbcTemplate.queryForMap(
+                "select status, processing_started_at from outbox_event "
+                        + "where name like 'PROCESSING-TEST-%' order by id desc limit 1");
+
+        assertEquals(OutboxEventStatus.PROCESSING.name(), row.get("status"));
+        Timestamp storedProcessingStartedAt = (Timestamp) row.get("processing_started_at");
+        assertEquals(processingStartedAt, storedProcessingStartedAt.toInstant());
     }
 
     @Test

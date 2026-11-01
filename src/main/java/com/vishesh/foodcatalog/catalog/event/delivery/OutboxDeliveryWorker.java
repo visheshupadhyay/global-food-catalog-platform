@@ -2,7 +2,7 @@ package com.vishesh.foodcatalog.catalog.event.delivery;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -20,6 +20,9 @@ public class OutboxDeliveryWorker {
     private final OutboxDeliveryService outboxDeliveryService;
     private final Clock clock;
     private final int batchSize;
+
+    @Value("${catalog.outbox.processing-timeout-seconds:60}")
+    private long processingTimeoutSeconds = 60L;
 
     public OutboxDeliveryWorker(OutboxEventRepository outboxEventRepository,
             OutboxDeliveryService outboxDeliveryService,
@@ -40,10 +43,13 @@ public class OutboxDeliveryWorker {
     /** Processes one bounded batch; scheduling can call this method later. */
     @Scheduled(fixedDelayString = "${catalog.outbox.poll-delay-ms}")
     public void runOnce() {
-        List<OutboxEvent> events = outboxEventRepository.findPendingEvents(clock.instant(), batchSize);
-        for (OutboxEvent event : events) {
+        Instant now = clock.instant();
+        outboxEventRepository.recoverStaleProcessingEvents(now.minusSeconds(processingTimeoutSeconds));
+        Optional<OutboxEvent> event = outboxEventRepository.claimNextPendingEvent(now);
+        // List<OutboxEvent> events = outboxEventRepository.findPendingEvents(clock.instant(), batchSize);
+        if(event.isPresent()) {
             try {
-                outboxDeliveryService.deliver(event);
+                outboxDeliveryService.deliver(event.get());
             } catch (RuntimeException ignored) {
                 // One malformed event must not prevent the rest of the batch from being attempted.
             }

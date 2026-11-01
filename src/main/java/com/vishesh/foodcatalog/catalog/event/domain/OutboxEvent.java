@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /** Immutable delivery record kept until Kafka accepts the event. */
+/** Immutable business event waiting to be delivered, retried, or replayed. */
 public final class OutboxEvent {
     private final Long id;
     private final UUID eventId;
@@ -20,11 +21,13 @@ public final class OutboxEvent {
     private final Instant createdTimestamp;
     private final Instant publishedTimestamp;
     private final Instant failedTimestamp;
+    private final Instant processingStartedAt;
 
     public OutboxEvent(Long id, UUID eventId, UUID originalEventId, OutboxEventType eventType, String kafkaKey,
             String payload, OutboxEventStatus status, Long retryCount, Instant nextRetryTime,
             String lastErrorMessage, Instant createdTimestamp, Instant publishedTimestamp,
-            Instant failedTimestamp, Long aggregateId, Long aggregateVersion) {
+            Instant failedTimestamp, Long aggregateId, Long aggregateVersion,
+            Instant processingStartedAt) {
 
         if (eventId == null) {
             throw new IllegalArgumentException("Event Id cannot be null");
@@ -65,6 +68,17 @@ public final class OutboxEvent {
         this.failedTimestamp = failedTimestamp;
         this.aggregateId = aggregateId;
         this.aggregateVersion = aggregateVersion;
+        this.processingStartedAt = processingStartedAt;
+    }
+
+    /** Backward-compatible constructor for callers that do not claim an event yet. */
+    public OutboxEvent(Long id, UUID eventId, UUID originalEventId, OutboxEventType eventType, String kafkaKey,
+            String payload, OutboxEventStatus status, Long retryCount, Instant nextRetryTime,
+            String lastErrorMessage, Instant createdTimestamp, Instant publishedTimestamp,
+            Instant failedTimestamp, Long aggregateId, Long aggregateVersion) {
+        this(id, eventId, originalEventId, eventType, kafkaKey, payload, status, retryCount, nextRetryTime,
+                lastErrorMessage, createdTimestamp, publishedTimestamp, failedTimestamp, aggregateId,
+                aggregateVersion, null);
     }
 
     public Long getId() {
@@ -125,6 +139,10 @@ public final class OutboxEvent {
 
     public Instant getFailedTimestamp() {
         return failedTimestamp;
+    }
+
+    public Instant getProcessingStartedAt() {
+        return processingStartedAt;
     }
 
     

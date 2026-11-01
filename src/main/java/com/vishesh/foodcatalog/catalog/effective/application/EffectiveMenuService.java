@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import com.vishesh.foodcatalog.catalog.application.OutletNotFoundException;
 import com.vishesh.foodcatalog.catalog.domain.ChainStatus;
@@ -16,7 +17,7 @@ public class EffectiveMenuService {
     private final EffectiveMenuDataProvider effectiveMenuDataProvider;
     private final EffectiveMenuAssembler effectiveMenuAssembler;
 
-    public EffectiveMenuService(EffectiveMenuDataProvider effectiveMenuDataProvider,
+    public EffectiveMenuService(@Qualifier("postgresEffectiveMenuDataProvider") EffectiveMenuDataProvider effectiveMenuDataProvider,
             EffectiveMenuAssembler effectiveMenuAssembler) {
 
         this.effectiveMenuDataProvider = effectiveMenuDataProvider;

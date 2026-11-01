@@ -3,6 +3,7 @@ package com.vishesh.foodcatalog.catalog.event.application;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,11 +12,13 @@ import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventStatus;
 
 /** Creates a fresh pending delivery attempt without changing the original event. */
 @Service
+/** Creates a fresh pending event when an operator replays a failed event. */
 public class OutboxEventReplayService {
 
     private final OutboxEventRepository repository;
 
-    public OutboxEventReplayService(OutboxEventRepository repository) {
+    public OutboxEventReplayService(
+            @Qualifier("outboxEventPersistenceAdapter") OutboxEventRepository repository) {
         this.repository = repository;
     }
 

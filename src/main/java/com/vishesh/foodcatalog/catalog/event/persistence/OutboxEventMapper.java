@@ -6,6 +6,7 @@ import com.vishesh.foodcatalog.catalog.event.domain.OutboxEvent;
 
 /** Converts between the immutable domain event and its JPA row representation. */
 @Component
+/** Converts between the business outbox event and its JPA database row. */
 public class OutboxEventMapper {
 
     public OutboxEventEntity toEntity(OutboxEvent domain) {
@@ -28,7 +29,8 @@ public class OutboxEventMapper {
                 domain.getStatus(),
                 domain.getRetryCount(),
                 domain.getNextRetryTime(),
-                domain.getLastErrorMessage());
+                domain.getLastErrorMessage(),
+                domain.getProcessingStartedAt());
     }
 
     public OutboxEvent toDomain(OutboxEventEntity entity) {
@@ -51,6 +53,7 @@ public class OutboxEventMapper {
                 entity.getPublishedTimestamp(),
                 entity.getFailedTimestamp(),
                 entity.getAggregateId(),
-                entity.getAggregateVersion());
+                entity.getAggregateVersion(),
+                entity.getProcessingStartedAt());
     }
 }

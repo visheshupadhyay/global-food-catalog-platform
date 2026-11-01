@@ -83,7 +83,7 @@ public class MenuItemPersistenceAdapterTest {
                 null);
 
         when(mapper.toEntity(menuItem)).thenReturn(entity);
-        when(repository.save(entity)).thenReturn(savedEntity);
+        when(repository.saveAndFlush(entity)).thenReturn(savedEntity);
         when(mapper.toDomain(savedEntity)).thenReturn(expectedMenuItem);
 
         MenuItem actualMenuItem = adapter.save(menuItem);
@@ -94,7 +94,7 @@ public class MenuItemPersistenceAdapterTest {
         assertEquals(expectedMenuItem.getCreatedAt(), actualMenuItem.getCreatedAt());
         assertEquals(expectedMenuItem.getUpdatedAt(), actualMenuItem.getUpdatedAt());
         verify(mapper).toEntity(menuItem);
-        verify(repository).save(entity);
+        verify(repository).saveAndFlush(entity);
         verify(mapper).toDomain(savedEntity);
     }
 

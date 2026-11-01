@@ -18,6 +18,7 @@ import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventStatus;
 /** PostgreSQL adapter for the application-facing outbox repository port. */
 /** Translates the application outbox port into PostgreSQL operations. */
 @Repository
+/** Keeps outbox persistence details out of the application and delivery services. */
 public class OutboxEventPersistenceAdapter implements OutboxEventRepository {
     private final OutboxEventJpaRepository repository;
     private final OutboxEventMapper mapper;
@@ -130,5 +131,31 @@ public class OutboxEventPersistenceAdapter implements OutboxEventRepository {
         repository.save(entity);
 
         return mapper.toDomain(entity);
+    }
+
+    @Override
+    @Transactional
+    public Optional<OutboxEvent> claimNextPendingEvent(Instant now) {
+        if (now == null) {
+            throw new IllegalArgumentException("Current time cannot be null");
+        }
+        PageRequest page = PageRequest.of(0, 1, Sort.by(Sort.Direction.ASC, "createdTimestamp"));
+        return repository.findDueBatch(OutboxEventStatus.PENDING, now, page)
+                .stream()
+                .findFirst()
+                .map(entity -> {
+                    entity.setStatus(OutboxEventStatus.PROCESSING);
+                    entity.setProcessingStartedAt(now);
+                    return mapper.toDomain(repository.save(entity));
+                });
+    }
+
+    @Override
+    @Transactional
+    public int recoverStaleProcessingEvents(Instant cutoffTime) {
+        if (cutoffTime == null) {
+            throw new IllegalArgumentException("Cutoff time cannot be null");
+        }
+        return repository.recoverStaleProcessingEvents(cutoffTime);
     }
 }

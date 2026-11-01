@@ -8,7 +8,7 @@ import com.vishesh.foodcatalog.catalog.effective.domain.BaseMenuItemSnapshot;
 import com.vishesh.foodcatalog.catalog.effective.domain.EffectiveMenuItem;
 import com.vishesh.foodcatalog.catalog.effective.domain.OutletOverrideSnapshot;
 
-@Component
+@Component("defaultEffectiveMenuResolver")
 /** Combines one base item with one outlet override without changing the base item. */
 public class DefaultEffectiveMenuResolver implements EffectiveMenuResolver {
 
