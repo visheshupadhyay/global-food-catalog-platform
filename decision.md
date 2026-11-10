@@ -683,3 +683,51 @@ while response size materially changed throughput.
 **Reason:** local testing reduced transferred bytes with gzip but increased CPU and
 latency. Compression will be reconsidered with production-like CPU and network limits.
 
+### D-098 - Cache operations are observable but non-critical
+
+**Decision:** record cache hits, misses, read failures, writes, write failures,
+evictions, and eviction failures in the Effective Menu operational metrics snapshot.
+
+**Reason:** Redis is a derived serving optimization, so operators need visibility into
+cache health without making Redis a dependency for customer reads.
+
+**Rule:** a Redis operation may increment a metric and log a warning, but a cache
+failure must continue through the PostgreSQL read-model fallback. Cache metrics do not
+change business data or event-processing decisions.
+
+## 14. Confirmed production-readiness decisions
+
+### D-099 - PostgreSQL and Kafka are readiness dependencies
+
+**Decision:** Catalog Service and Effective Menu Service readiness includes the database
+and Kafka health contributors. Liveness only reports whether the application process is
+alive.
+
+**Rule:** a PostgreSQL or Kafka outage makes readiness `DOWN`, while the process may
+remain live so orchestration can restart or replace it.
+
+### D-100 - Kafka readiness uses a broker metadata check
+
+**Decision:** each service exposes a small `kafkaHealthIndicator` that uses the existing
+`spring.kafka.bootstrap-servers` setting and requests broker metadata with a short
+timeout.
+
+**Reason:** Spring Boot 4 does not provide a Kafka health contributor in this setup, and
+properties can include an indicator but cannot create one.
+
+### D-101 - Redis is optional for readiness
+
+**Decision:** Redis is observed through health and operational metrics but is not a
+readiness dependency.
+
+**Reason:** Redis is a derived performance cache. If it fails, customer requests must
+continue through the PostgreSQL read model.
+
+### D-102 - Diagnostic logs remain intentionally minimal
+
+**Decision:** retain the current logging level and use durable event records plus
+operational metrics for investigation instead of adding structured boundary logs now.
+
+**Trade-off:** this reduces log volume and payload exposure, but operators may need to
+correlate event IDs and correlation IDs through database records and metrics.
+

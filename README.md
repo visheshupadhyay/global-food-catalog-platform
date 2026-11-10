@@ -18,6 +18,18 @@ The service runs on `http://localhost:8080`. Flyway owns schema changes; Hiberna
 
 Health endpoint: `http://localhost:8080/actuator/health`.
 
+### Health and readiness
+
+```powershell
+Invoke-RestMethod http://localhost:8080/actuator/health/liveness
+Invoke-RestMethod http://localhost:8080/actuator/health/readiness
+Invoke-RestMethod http://localhost:8080/actuator/health
+```
+
+Liveness reports that the process is alive. Readiness includes PostgreSQL and Kafka;
+an outage of either dependency makes readiness `DOWN`. Kafka is checked by the custom
+`kafkaHealthIndicator` using `spring.kafka.bootstrap-servers`.
+
 ## Event flow
 
 ```text
