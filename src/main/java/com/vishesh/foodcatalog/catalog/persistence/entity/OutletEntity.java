@@ -40,6 +40,9 @@ public class OutletEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "timezone", nullable = false)
+    private String timezone;
+
     protected OutletEntity() {
         // JPA uses this constructor while rebuilding an outlet from a database row.
     }
@@ -71,4 +74,10 @@ public class OutletEntity {
     public Instant getUpdatedAt() {
         return updatedAt;
     }
+
+    public String getTimezone() {
+        return timezone;
+    }
+
+
 }

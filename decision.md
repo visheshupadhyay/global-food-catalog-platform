@@ -163,9 +163,9 @@ Example: if base price changes from EUR 6.90 to EUR 7.10 while Berlin has an exp
 
 ### D-023 — Schedule correctness and cache warming
 
-**Decision:** a scheduled background job pre-warms or refreshes caches at schedule boundaries, but it is not the sole correctness mechanism.
+**Decision:** customer-serving logic re-evaluates persisted schedule metadata at the current outlet-local time, even when the underlying snapshot came from Redis.
 
-**Rule:** serving logic checks that a cached effective menu is still valid at the current outlet-local time. If cache warming fails, an expired entry is not served.
+**Rule:** Redis stores a snapshot for speed, never schedule truth. A schedule boundary therefore changes the returned availability without waiting for another Kafka event or cache expiry. Cache warming may be added later as a performance optimization, not as a correctness mechanism.
 
 ### D-024 — Optimistic locking for concurrent writes
 
@@ -730,4 +730,83 @@ operational metrics for investigation instead of adding structured boundary logs
 
 **Trade-off:** this reduces log volume and payload exposure, but operators may need to
 correlate event IDs and correlation IDs through database records and metrics.
+
+## 15. Confirmed weekly scheduling decisions
+
+### D-103 - Inactive scheduled items remain visible but unavailable
+
+**Decision:** when the current time is outside an item's active schedule, the item
+remains in the customer menu with `availability=false`.
+
+**Reason:** this preserves the existing sold-out-but-visible customer rule and tells
+customers that the item exists but cannot currently be ordered.
+
+### D-104 - Schedules use the outlet timezone
+
+**Decision:** schedule times are interpreted in the owning outlet's IANA timezone,
+such as `Europe/Berlin` or `America/New_York`.
+
+**Rule:** Java `ZoneId` and `ZonedDateTime` perform evaluation; timestamps are not
+manually converted with fixed offsets.
+
+### D-105 - Schedules are weekly and recurring
+
+**Decision:** the first scheduling version supports recurring weekly schedules rather
+than one-off date ranges.
+
+**Reason:** weekly opening hours are the common restaurant use case and are easier to
+validate and operate.
+
+### D-106 - Multiple windows are allowed per day
+
+**Decision:** an item may have multiple non-overlapping time windows on one weekday,
+such as `09:00–14:00` and `17:00–22:00`.
+
+**Rule:** overlapping or touching windows are rejected in the first version rather than
+silently merged.
+
+### D-107 - Base schedules and sparse outlet overrides
+
+**Decision:** a base menu item may define a schedule, and an outlet may override it.
+An outlet override is sparse per weekday; unspecified weekdays inherit the base day.
+
+**Example:** if an outlet overrides Monday only, Tuesday through Sunday continue using
+the base schedule.
+
+### D-108 - Schedule details are carried in Kafka events
+
+**Decision:** `SCHEDULE_CHANGED` events include a stable schedule-scope ID, the
+effective schedule windows, schedule version, and owning outlet timezone needed by
+Effective Menu to evaluate availability.
+
+**Reason:** the consumer must be able to process, retry, and replay an event without
+making a synchronous Catalog API call. This keeps event processing resilient and
+preserves the service boundary. The schedule scope ID is derived from the menu item
+and scope (`{menuItemId}:base` or `{menuItemId}:{outletId}`), because this version
+allows exactly one base schedule and one outlet override per item.
+
+### D-109 - Shared schedule changes fan out per affected outlet
+
+**Decision:** Catalog creates one schedule-change outbox event for each affected
+outlet. Each event carries one concrete `outletId`.
+
+**Reason:** Effective Menu owns one snapshot and one cache key per outlet. A
+per-outlet event keeps processing, retries, DLQ handling, and cache eviction isolated
+and easy to reason about.
+
+### D-110 - Effective Menu separates schedule resolution from time evaluation
+
+**Decision:** Effective Menu resolves a sparse outlet weekday override on top of the
+base schedule before evaluating the current time. `WeeklyScheduleEvaluator` converts
+the event instant into the outlet's IANA timezone; `EffectiveScheduleResolver` applies
+override precedence by weekday.
+
+**Rule:** an outlet weekday with persisted windows overrides the base weekday. A
+missing or empty outlet weekday inherits the base windows because the current sparse
+window table stores rows only for actual windows. Existing events that contain only an
+already-combined schedule remain supported as a compatibility path.
+
+**Reason:** separating these responsibilities makes DST, boundary, inheritance, and
+cache-invalidation behavior independently testable without putting all schedule logic
+inside the Kafka event handler.
 

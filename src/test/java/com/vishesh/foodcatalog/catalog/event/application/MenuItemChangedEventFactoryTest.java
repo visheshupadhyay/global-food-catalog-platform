@@ -1,6 +1,7 @@
 package com.vishesh.foodcatalog.catalog.event.application;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -164,5 +165,19 @@ class MenuItemChangedEventFactoryTest {
                 ITEM_ID, CHAIN_ID, VERSION, BigDecimal.ONE, null, null, OUTLET_ID, null, MenuItemStatus.ACTIVE,"Veg Burger");
 
         assertNotEquals(first.getEventId(), second.getEventId());
+    }
+
+    @Test
+    void create_scheduleChange_marksScheduleAndVersion() {
+        MenuItemChangedEvent event = factory.create(
+                ITEM_ID, CHAIN_ID, VERSION, null, null, null, OUTLET_ID,
+                "corr-schedule", MenuItemStatus.ACTIVE, null, true, 2L, "UTC", Map.of());
+
+        assertEquals(Boolean.TRUE, event.getScheduleChanged());
+        assertEquals(2L, event.getScheduleVersion());
+        assertEquals(OutboxEventType.SCHEDULE_CHANGED, event.getEventType());
+        assertEquals(ITEM_ID + ":" + OUTLET_ID, event.getScheduleId());
+        assertNull(event.getPrice());
+        assertNull(event.getAvailability());
     }
 }

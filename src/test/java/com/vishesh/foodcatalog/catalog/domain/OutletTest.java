@@ -28,6 +28,25 @@ public class OutletTest {
         assertEquals(outlet.getCreatedAt(), outlet.getUpdatedAt());
         assertEquals(outletCode, outlet.getOutletCode());
         assertEquals(currency, outlet.getCurrency());
+        assertEquals("UTC", outlet.getTimezone());
+    }
+
+    @Test
+    void acceptsAndTrimsIanaTimezone() {
+        Outlet outlet = new Outlet(10L, "BURGER-KING", "BERLIN-MITTE",
+                Currency.getInstance("EUR"), " Europe/Berlin ");
+
+        assertEquals("Europe/Berlin", outlet.getTimezone());
+    }
+
+    @Test
+    void rejectsMissingOrInvalidTimezone() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new Outlet(10L, "BURGER-KING", "BERLIN-MITTE",
+                        Currency.getInstance("EUR"), "  "));
+        assertThrows(IllegalArgumentException.class,
+                () -> new Outlet(10L, "BURGER-KING", "BERLIN-MITTE",
+                        Currency.getInstance("EUR"), "Not/AZone"));
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.vishesh.foodcatalog.catalog.persistence.adapter;
 
 import java.util.Optional;
+import java.util.List;
 
 import org.springframework.stereotype.Repository;
 
@@ -11,15 +12,13 @@ import com.vishesh.foodcatalog.catalog.persistence.repository.MenuItemJpaReposit
 import com.vishesh.foodcatalog.catalog.repository.MenuItemRepository;
 
 /** Connects the application repository contract to the JPA repository. */
-@Repository 
+@Repository
 public class MenuItemPersistenceAdapter implements MenuItemRepository {
 
     private final MenuItemJpaRepository repository;
     private final MenuItemMapper mapper;
 
-    public MenuItemPersistenceAdapter(MenuItemJpaRepository repository,
-            MenuItemMapper mapper) {
-
+    public MenuItemPersistenceAdapter(MenuItemJpaRepository repository, MenuItemMapper mapper) {
         this.mapper = mapper;
         this.repository = repository;
     }
@@ -53,6 +52,11 @@ public class MenuItemPersistenceAdapter implements MenuItemRepository {
     @Override
     public boolean existsByBusinessCodeAndRestaurantChainId(String businessCode, Long restaurantChainId) {
         return repository.existsByBusinessCodeAndRestaurantChainId(businessCode.trim(), restaurantChainId);
+    }
+
+    @Override
+    public List<Long> findAffectedOutletIds(Long menuItemId) {
+        return repository.findAffectedOutletIds(menuItemId);
     }
 
 }

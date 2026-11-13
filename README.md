@@ -18,6 +18,17 @@ The service runs on `http://localhost:8080`. Flyway owns schema changes; Hiberna
 
 Health endpoint: `http://localhost:8080/actuator/health`.
 
+### Scheduled menu availability
+
+Schedules are recurring weekly windows. Base schedules may have multiple
+non-overlapping windows per weekday; an outlet can provide sparse weekday overrides.
+Unspecified weekdays inherit the base schedule. Windows use the outlet's IANA
+timezone. Outside an active window the item remains visible but unavailable, while
+`HIDDEN`, `DRAFT`, and `ARCHIVED` lifecycle rules still control visibility.
+
+Creating, replacing, or deleting a schedule writes schedule rows and its schedule
+change outbox event in one transaction. Controllers never publish directly to Kafka.
+
 ### Health and readiness
 
 ```powershell
