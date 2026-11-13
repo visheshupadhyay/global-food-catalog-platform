@@ -55,7 +55,7 @@ import jakarta.persistence.EntityManager;
 @Import(TestcontainersConfiguration.class)
 class CatalogSchemaIntegrationTest {
 
-    private static final int EXPECTED_MIGRATION_COUNT = 11;
+    private static final int EXPECTED_MIGRATION_COUNT = 15;
     private static final Long UNKNOWN_CHAIN_ID = 999999999L;
 
     @Autowired
@@ -130,7 +130,7 @@ class CatalogSchemaIntegrationTest {
         String[] requiredTables = {
                 "restaurant_chain", "menu_group", "outlet", "menu_category",
                 "menu_item", "menu_group_outlet", "outlet_override",
-                "catalog_audit", "outbox_event"
+                "catalog_audit", "outbox_event", "menu_item_schedule"
         };
 
         for (String table : requiredTables) {

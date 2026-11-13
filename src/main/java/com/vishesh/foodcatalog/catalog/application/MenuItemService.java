@@ -8,6 +8,7 @@ import java.util.Optional;
 import tools.jackson.core.JacksonException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import com.vishesh.foodcatalog.catalog.api.MenuItemUpdateRequest;
 import com.vishesh.foodcatalog.catalog.domain.MenuItem;
@@ -37,14 +38,14 @@ public class MenuItemService {
     private final ObjectMapper objectMapper;
 
     public MenuItemService(
-            @org.springframework.beans.factory.annotation.Qualifier("menuItemPersistenceAdapter") MenuItemRepository menuItemRepository,
-            @org.springframework.beans.factory.annotation.Qualifier("restaurantChainPersistenceAdapter") RestaurantChainRepository restaurantChainRepository,
-            @org.springframework.beans.factory.annotation.Qualifier("outletPersistenceAdapter") OutletRepository outletRepository,
-            @org.springframework.beans.factory.annotation.Qualifier("menuGroupPersistenceAdapter") MenuGroupRepository menuGroupRepository,
+            @Qualifier("menuItemPersistenceAdapter") MenuItemRepository menuItemRepository,
+            @Qualifier("restaurantChainPersistenceAdapter") RestaurantChainRepository restaurantChainRepository,
+            @Qualifier("outletPersistenceAdapter") OutletRepository outletRepository,
+            @Qualifier("menuGroupPersistenceAdapter") MenuGroupRepository menuGroupRepository,
             MenuItemChangedEventFactory menuItemChangedEventFactory,
-            @org.springframework.beans.factory.annotation.Qualifier("outboxEventPersistenceAdapter") OutboxEventRepository outboxEventRepository,
+            @Qualifier("outboxEventPersistenceAdapter") OutboxEventRepository outboxEventRepository,
             ObjectMapper objectMapper,
-            @org.springframework.beans.factory.annotation.Qualifier("menuGroupOutletPersistenceAdapter") MenuGroupOutletRepository menuGroupOutletRepository) {
+            @Qualifier("menuGroupOutletPersistenceAdapter") MenuGroupOutletRepository menuGroupOutletRepository) {
 
         this.menuItemRepository = menuItemRepository;
         this.restaurantChainRepository = restaurantChainRepository;

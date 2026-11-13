@@ -1,6 +1,7 @@
 package com.vishesh.foodcatalog.catalog.repository;
 
 import java.util.Optional;
+import java.util.List;
 
 import com.vishesh.foodcatalog.catalog.domain.MenuItem;
 
@@ -20,4 +21,6 @@ public interface MenuItemRepository {
     boolean existsByBusinessCodeAndRestaurantChainId(
             String businessCode,
             Long restaurantChainId);
+
+    List<Long> findAffectedOutletIds(Long menuItemId);
 }

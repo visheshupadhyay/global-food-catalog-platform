@@ -1,6 +1,7 @@
 package com.vishesh.foodcatalog.catalog.persistence.adapter;
 
 import org.springframework.stereotype.Repository;
+import java.util.Optional;
 
 import com.vishesh.foodcatalog.catalog.repository.OutletRepository;
 import com.vishesh.foodcatalog.catalog.persistence.repository.OutletJpaRepository;
@@ -18,5 +19,10 @@ public class OutletPersistenceAdapter implements OutletRepository {
     @Override
     public boolean existsByIdAndRestaurantChainId(Long outletId, Long restaurantChainId) {
         return repository.existsByIdAndRestaurantChainId(outletId, restaurantChainId);
+    }
+
+    @Override
+    public Optional<String> findTimezoneById(Long outletId) {
+        return repository.findById(outletId).map(entity -> entity.getTimezone());
     }
 }

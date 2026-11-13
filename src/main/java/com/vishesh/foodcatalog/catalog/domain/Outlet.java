@@ -1,6 +1,8 @@
 package com.vishesh.foodcatalog.catalog.domain;
 
 import java.time.Instant;
+import java.time.DateTimeException;
+import java.time.ZoneId;
 import java.util.Currency;
 
 /**
@@ -16,11 +18,21 @@ public class Outlet {
     private ChainStatus status;
     private Instant createdAt;
     private Instant updatedAt;
+    private String timezone;
 
+    /** Backward-compatible constructor; existing outlets use UTC until configured otherwise. */
     public Outlet(Long restaurantChainId,
             String displayName,
             String outletCode,
             Currency currency) {
+        this(restaurantChainId, displayName, outletCode, currency, "UTC");
+    }
+
+    public Outlet(Long restaurantChainId,
+            String displayName,
+            String outletCode,
+            Currency currency,
+            String timezone) {
 
         // A new outlet starts as DRAFT until it is ready for customers.
 
@@ -52,6 +64,10 @@ public class Outlet {
             throw new IllegalArgumentException("Currency cannot be null");
         }
 
+        if (timezone == null || timezone.isBlank()) {
+            throw new IllegalArgumentException("Timezone cannot be null or blank");
+        }
+
         displayName = displayName.trim();
         outletCode = outletCode.trim();
         this.currency = currency;
@@ -62,6 +78,11 @@ public class Outlet {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        try {
+            this.timezone = ZoneId.of(timezone.trim()).toString();
+        } catch (DateTimeException exception) {
+            throw new IllegalArgumentException("Timezone must be a valid IANA timezone", exception);
+        }
     }
 
     public void restoreFromArchive() {
@@ -122,6 +143,10 @@ public class Outlet {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public String getTimezone() {
+        return timezone;
     }
 
 }
