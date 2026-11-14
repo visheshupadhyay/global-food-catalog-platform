@@ -2,6 +2,7 @@ package com.vishesh.foodcatalog.catalog.event.application;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 import java.util.List;
 import java.util.Map;
@@ -110,5 +111,20 @@ public class MenuItemChangedEventFactory {
         return Boolean.TRUE.equals(scheduleChanged)
                 ? OutboxEventType.SCHEDULE_CHANGED
                 : OutboxEventType.MENU_ITEM_CHANGED;
+    }
+
+    /** Creates the sparse event emitted after a seasonal availability replacement. */
+    public MenuItemChangedEvent createSeasonalAvailabilityChanged(Long menuItemId, Long restaurantChainId,
+            Long aggregateVersion, Long seasonalAvailabilityVersion, Long outletId, String correlationId, MenuItemStatus status,
+            Boolean availability, String timezone, LocalDate startDate, LocalDate endDate) {
+        validatePositive(menuItemId, "Menu item id");
+        validatePositive(restaurantChainId, "Restaurant chain id");
+        validatePositiveWhenPresent(outletId, "Outlet id");
+        return new MenuItemChangedEvent(UUID.randomUUID(), null,
+                OutboxEventType.SEASONAL_AVAILABILITY_CHANGED, menuItemId, restaurantChainId, outletId,
+                aggregateVersion, null, availability, null, Instant.now(),
+                correlationId == null ? null : correlationId.trim(), status, null,
+                false, null, null, Map.of(), Map.of(), Map.of(), true, seasonalAvailabilityVersion,
+                startDate, endDate, timezone);
     }
 }

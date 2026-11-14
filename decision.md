@@ -810,3 +810,12 @@ already-combined schedule remain supported as a compatibility path.
 cache-invalidation behavior independently testable without putting all schedule logic
 inside the Kafka event handler.
 
+# D-109 — Seasonal availability uses outlet-local, end-exclusive date ranges
+
+Seasonal availability is an optional date range owned by Catalog. It is evaluated in the
+outlet timezone as `[startDate, endDate)`: the start date is included and the end date is
+excluded. An outlet rule overrides the base rule for that outlet. At customer-read time the
+Effective Menu Service requires catalog availability, the weekly schedule (if present), and
+the seasonal range (if present) to all be active. Seasonal changes use the transactional
+outbox and evict affected Redis entries through the existing event path.
+

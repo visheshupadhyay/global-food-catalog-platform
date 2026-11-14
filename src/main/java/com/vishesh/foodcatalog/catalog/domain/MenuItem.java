@@ -236,4 +236,9 @@ public class MenuItem {
         this.visibility = updatedVisibility;
     }
 
+    /** Marks a schedule or seasonal-rule change as an aggregate change for optimistic ordering. */
+    public void markAvailabilityRulesChanged() {
+        this.updatedAt = Instant.now();
+    }
+
 }

@@ -55,7 +55,7 @@ import jakarta.persistence.EntityManager;
 @Import(TestcontainersConfiguration.class)
 class CatalogSchemaIntegrationTest {
 
-    private static final int EXPECTED_MIGRATION_COUNT = 15;
+    private static final int EXPECTED_MIGRATION_COUNT = 16;
     private static final Long UNKNOWN_CHAIN_ID = 999999999L;
 
     @Autowired

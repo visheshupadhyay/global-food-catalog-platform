@@ -26,6 +26,13 @@ Unspecified weekdays inherit the base schedule. Windows use the outlet's IANA
 timezone. Outside an active window the item remains visible but unavailable, while
 `HIDDEN`, `DRAFT`, and `ARCHIVED` lifecycle rules still control visibility.
 
+### Seasonal availability
+
+An item can also have one optional base date range or one outlet-specific override.
+The range is evaluated in the outlet's IANA timezone as `[startDate, endDate)`: start
+is included and end is excluded. Catalog availability, the weekly schedule (when
+configured), and the seasonal range (when configured) must all be active.
+
 Creating, replacing, or deleting a schedule writes schedule rows and its schedule
 change outbox event in one transaction. Controllers never publish directly to Kafka.
 
