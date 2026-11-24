@@ -2,6 +2,8 @@ package com.vishesh.foodcatalog.catalog.api;
 
 import java.math.BigDecimal;
 
+import com.vishesh.foodcatalog.catalog.domain.MenuItemKind;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -26,6 +28,10 @@ public class CreateSharedMenuItemRequest {
     @Positive
     private Long menuCategoryId;
 
+    // Optional so existing clients keep creating normal products. BUNDLE is
+    // supplied explicitly only for meal/combo roots.
+    private MenuItemKind menuItemKind;
+
     public String getBusinessCode() {
         return businessCode;
     }
@@ -44,6 +50,10 @@ public class CreateSharedMenuItemRequest {
 
     public Long getMenuCategoryId() {
         return menuCategoryId;
+    }
+
+    public MenuItemKind getMenuItemKind() {
+        return menuItemKind;
     }
 
 }

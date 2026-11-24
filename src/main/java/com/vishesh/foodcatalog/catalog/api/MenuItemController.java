@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.vishesh.foodcatalog.catalog.application.MenuItemService;
 import com.vishesh.foodcatalog.catalog.domain.MenuItem;
+import com.vishesh.foodcatalog.catalog.domain.MenuItemKind;
 
 import jakarta.validation.Valid;
 
@@ -32,13 +33,9 @@ public class MenuItemController {
         // Create an item inherited by outlets through a menu group.
 
         // The controller is the HTTP front door; business rules stay in the service.
-        MenuItem menuItem = service.createMenuItem(request.getBusinessCode(),
-                request.getItemName(),
-                request.getItemPrice(),
-                restaurantChainId,
-                request.getMenuGroupId(),
-                request.getMenuCategoryId(),
-                null);
+        MenuItem menuItem = createMenuItem(request.getBusinessCode(), request.getItemName(),
+                request.getItemPrice(), restaurantChainId, request.getMenuGroupId(),
+                request.getMenuCategoryId(), null, request.getMenuItemKind());
 
         CreateSharedMenuItemResponse response = new CreateSharedMenuItemResponse(
                 menuItem.getId(),
@@ -52,7 +49,8 @@ public class MenuItemController {
                 menuItem.getUpdatedAt(),
                 menuItem.getOutletId(),
                 menuItem.getMenuGroupId(),
-                menuItem.getMenuCategoryId());
+                menuItem.getMenuCategoryId(),
+                menuItem.getMenuItemKind());
 
         // Tell the caller where the new item can be found later.
         URI location = URI.create("/api/v1/restaurant-chains/" + restaurantChainId
@@ -68,13 +66,9 @@ public class MenuItemController {
             @Valid @RequestBody CreateOutletMenuItemRequest request) {
         // Create an item that belongs only to this outlet.
 
-        MenuItem menuItem = service.createMenuItem(request.getBusinessCode(),
-                request.getItemName(),
-                request.getItemPrice(),
-                restaurantChainId,
-                null,
-                request.getMenuCategoryId(),
-                outletId);
+        MenuItem menuItem = createMenuItem(request.getBusinessCode(), request.getItemName(),
+                request.getItemPrice(), restaurantChainId, null, request.getMenuCategoryId(),
+                outletId, request.getMenuItemKind());
 
         CreateOutletMenuItemResponse response = new CreateOutletMenuItemResponse(
                 menuItem.getId(),
@@ -87,7 +81,8 @@ public class MenuItemController {
                 menuItem.getCreatedAt(),
                 menuItem.getUpdatedAt(),
                 menuItem.getOutletId(),
-                menuItem.getMenuCategoryId());
+                menuItem.getMenuCategoryId(),
+                menuItem.getMenuItemKind());
 
         URI location = URI.create("/api/v1/restaurant-chains/" + restaurantChainId
                 + "/outlets/" + outletId + "/menu-items/" + response.id());
@@ -114,8 +109,29 @@ public class MenuItemController {
                 menuItem.getUpdatedAt(),
                 menuItem.getOutletId(),
                 menuItem.getMenuGroupId(),
-                menuItem.getMenuCategoryId());
+                menuItem.getMenuCategoryId(),
+                menuItem.getMenuItemKind());
 
         return ResponseEntity.ok(response);
+    }
+
+    private MenuItem createMenuItem(
+            String businessCode,
+            String itemName,
+            java.math.BigDecimal itemPrice,
+            Long restaurantChainId,
+            Long menuGroupId,
+            Long menuCategoryId,
+            Long outletId,
+            MenuItemKind menuItemKind) {
+
+        // PRODUCT was the only kind before bundles existed. Use the original
+        // method so older clients and callers retain exactly the same path.
+        if (menuItemKind == null || menuItemKind == MenuItemKind.PRODUCT) {
+            return service.createMenuItem(businessCode, itemName, itemPrice,
+                    restaurantChainId, menuGroupId, menuCategoryId, outletId);
+        }
+        return service.createMenuItem(businessCode, itemName, itemPrice,
+                restaurantChainId, menuGroupId, menuCategoryId, outletId, menuItemKind);
     }
 }

@@ -19,6 +19,7 @@ public class MenuItem {
     private Long version;
     private Long restaurantChainId;
     private Instant updatedAt;
+    private MenuItemKind menuItemKind;
 
     public MenuItem(
             String businessCode,
@@ -29,8 +30,27 @@ public class MenuItem {
             Long menuCategoryId,
             Long outletId) {
 
+        this(businessCode, itemName, itemPrice, restaurantChainId, menuGroupId,
+                menuCategoryId, outletId, MenuItemKind.PRODUCT);
+    }
+
+    /**
+     * Creates a new product or bundle. Existing callers use the shorter constructor
+     * above and therefore continue to create normal products by default.
+     */
+    public MenuItem(
+            String businessCode,
+            String itemName,
+            BigDecimal itemPrice,
+            Long restaurantChainId,
+            Long menuGroupId,
+            Long menuCategoryId,
+            Long outletId,
+            MenuItemKind menuItemKind) {
+
         validateCommonFields(businessCode, itemName, itemPrice, restaurantChainId,
                 menuGroupId, menuCategoryId, outletId, MenuItemStatus.DRAFT, 0L);
+        validateMenuItemKind(menuItemKind);
 
         businessCode = businessCode.trim();
         itemName = itemName.trim();
@@ -50,11 +70,21 @@ public class MenuItem {
         this.version = 0L;
         this.restaurantChainId = restaurantChainId;
         this.updatedAt = now;
+        this.menuItemKind = menuItemKind;
     }
 
     public MenuItem(Long id, String itemName, BigDecimal itemPrice, Instant createdAt, Long menuGroupId,
             Long menuCategoryId, Long outletId, String businessCode, MenuItemStatus status, boolean visibility,
             boolean availability, Long version, Long restaurantChainId, Instant updatedAt) {
+
+        this(id, itemName, itemPrice, createdAt, menuGroupId, menuCategoryId, outletId,
+                businessCode, status, visibility, availability, version, restaurantChainId,
+                updatedAt, MenuItemKind.PRODUCT);
+    }
+
+    public MenuItem(Long id, String itemName, BigDecimal itemPrice, Instant createdAt, Long menuGroupId,
+            Long menuCategoryId, Long outletId, String businessCode, MenuItemStatus status, boolean visibility,
+            boolean availability, Long version, Long restaurantChainId, Instant updatedAt, MenuItemKind menuItemKind) {
 
         validateCommonFields(businessCode, itemName, itemPrice, restaurantChainId,
                 menuGroupId, menuCategoryId, outletId, status, version);
@@ -69,6 +99,7 @@ public class MenuItem {
         if (createdAt == null || updatedAt == null) {
             throw new IllegalArgumentException("Timestamps should be present");
         }
+        validateMenuItemKind(menuItemKind);
 
         itemName = itemName.trim();
         businessCode = businessCode.trim();
@@ -86,6 +117,7 @@ public class MenuItem {
         this.version = version;
         this.restaurantChainId = restaurantChainId;
         this.updatedAt = updatedAt;
+        this.menuItemKind = menuItemKind;
     }
 
     /**
@@ -133,6 +165,13 @@ public class MenuItem {
         }
         if (version == null || version < 0) {
             throw new IllegalArgumentException("Version must be zero or greater");
+        }
+
+    }
+
+    private static void validateMenuItemKind(MenuItemKind menuItemKind) {
+        if (menuItemKind == null) {
+            throw new IllegalArgumentException("Menu item kind must be present");
         }
     }
 
@@ -199,7 +238,10 @@ public class MenuItem {
         this.itemPrice = updatedPrice;
     }
 
-    /** Changes the lifecycle state only when the transition is allowed by business rules. */
+    /**
+     * Changes the lifecycle state only when the transition is allowed by business
+     * rules.
+     */
     public void updateStatus(MenuItemStatus newStatus) {
         if (newStatus == null) {
             throw new IllegalArgumentException("Menu item status cannot be null");
@@ -236,8 +278,19 @@ public class MenuItem {
         this.visibility = updatedVisibility;
     }
 
-    /** Marks a schedule or seasonal-rule change as an aggregate change for optimistic ordering. */
+    /**
+     * Marks a schedule or seasonal-rule change as an aggregate change for
+     * optimistic ordering.
+     */
     public void markAvailabilityRulesChanged() {
+        this.updatedAt = Instant.now();
+    }
+
+    public MenuItemKind getMenuItemKind() {
+        return menuItemKind;
+    }
+
+    public void markStructureChanged() {
         this.updatedAt = Instant.now();
     }
 

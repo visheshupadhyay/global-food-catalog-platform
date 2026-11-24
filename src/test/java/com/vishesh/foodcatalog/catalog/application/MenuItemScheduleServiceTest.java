@@ -46,6 +46,7 @@ class MenuItemScheduleServiceTest {
     @Mock OutboxEventFactory outboxFactory;
     @Mock OutboxEventRepository outboxEvents;
     @Mock ObjectMapper objectMapper;
+    @Mock BundleRefreshPublisher bundleRefreshPublisher;
 
     @Test
     void save_baseSchedule_createsOutboxForEveryAffectedOutlet() throws Exception {
@@ -74,6 +75,9 @@ class MenuItemScheduleServiceTest {
 
         assertEquals(saved, result);
         verify(outboxEvents, org.mockito.Mockito.times(2)).save(any(OutboxEvent.class));
+        verify(bundleRefreshPublisher).publishAncestorBundleRefreshes(
+                org.mockito.ArgumentMatchers.eq(101L), org.mockito.ArgumentMatchers.eq(7L), anyString(),
+                org.mockito.ArgumentMatchers.isNull());
     }
 
     @Test
@@ -103,7 +107,7 @@ class MenuItemScheduleServiceTest {
 
     private MenuItemScheduleService service() {
         return new MenuItemScheduleService(menuItems, outlets, schedules, eventFactory,
-                outboxFactory, outboxEvents, objectMapper);
+                outboxFactory, outboxEvents, objectMapper, bundleRefreshPublisher);
     }
 
     private CreateScheduleRequest request(Long outletId) {

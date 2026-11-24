@@ -28,6 +28,21 @@ public class MenuItemTest {
         assertEquals("bh-ge-101", menuItem.getBusinessCode());
         assertNotNull(menuItem.getCreatedAt());
         assertNotNull(menuItem.getUpdatedAt());
+        assertEquals(MenuItemKind.PRODUCT, menuItem.getMenuItemKind());
+    }
+
+    @Test
+    void newBundle_keepsItsBundleKind() {
+        MenuItem burgerMeal = new MenuItem("MEAL-101", "Burger Meal", BigDecimal.valueOf(199),
+                101L, 201L, 301L, null, MenuItemKind.BUNDLE);
+
+        assertEquals(MenuItemKind.BUNDLE, burgerMeal.getMenuItemKind());
+    }
+
+    @Test
+    void newItem_rejectsMissingKind() {
+        assertThrows(IllegalArgumentException.class, () -> new MenuItem("MEAL-101", "Burger Meal",
+                BigDecimal.valueOf(199), 101L, 201L, 301L, null, null));
     }
 
     @Test

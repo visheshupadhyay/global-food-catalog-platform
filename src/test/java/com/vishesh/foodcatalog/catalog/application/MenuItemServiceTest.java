@@ -36,6 +36,7 @@ import tools.jackson.databind.ObjectMapper;
 import com.vishesh.foodcatalog.catalog.api.MenuItemUpdateRequest;
 import com.vishesh.foodcatalog.catalog.domain.MenuGroup;
 import com.vishesh.foodcatalog.catalog.domain.MenuItem;
+import com.vishesh.foodcatalog.catalog.domain.MenuItemKind;
 import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
 import com.vishesh.foodcatalog.catalog.domain.RestaurantChain;
 import com.vishesh.foodcatalog.catalog.repository.MenuGroupRepository;
@@ -48,6 +49,7 @@ import com.vishesh.foodcatalog.catalog.event.application.MenuItemChangedEventFac
 import com.vishesh.foodcatalog.catalog.event.application.OutboxEventRepository;
 import com.vishesh.foodcatalog.catalog.event.domain.MenuItemChangedEvent;
 import com.vishesh.foodcatalog.catalog.event.domain.OutboxEvent;
+import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventStatus;
 import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventType;
 
 @ExtendWith(MockitoExtension.class)
@@ -76,6 +78,9 @@ public class MenuItemServiceTest {
 	@Mock
 	private ObjectMapper objectMapper;
 
+	@Mock
+	private BundleRefreshPublisher bundleRefreshPublisher;
+
 	MenuItemService service;
 
 	@BeforeEach
@@ -87,7 +92,8 @@ public class MenuItemServiceTest {
 				menuItemChangedEventFactory,
 				outboxEventRepository,
 				objectMapper,
-				menuGroupOutletRepository);
+				menuGroupOutletRepository,
+				bundleRefreshPublisher);
 
 		lenient().when(menuGroupOutletRepository.findOutletIdsByMenuGroupId(anyLong()))
 				.thenReturn(List.of());
@@ -159,6 +165,24 @@ public class MenuItemServiceTest {
 		assertEquals(itemName, menuItem.getItemName());
 		verify(menuItemRepository).save(menuItem);
 		assertEquals(0L, menuItem.getVersion());
+	}
+
+	@Test
+	void createMenuItem_withBundleKind_savesABundleRoot() {
+		when(restaurantChainRepository.findById(101L))
+				.thenReturn(Optional.of(mock(RestaurantChain.class)));
+		when(menuGroupRepository.findByIdAndRestaurantChainId(201L, 101L))
+				.thenReturn(Optional.of(mock(MenuGroup.class)));
+		when(menuItemRepository.existsByBusinessCodeAndRestaurantChainId("BURGER-MEAL", 101L))
+				.thenReturn(false);
+		when(menuItemRepository.save(any(MenuItem.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		MenuItem result = service.createMenuItem("BURGER-MEAL", "Burger Meal",
+				BigDecimal.valueOf(299), 101L, 201L, 301L, null, MenuItemKind.BUNDLE);
+
+		assertEquals(MenuItemKind.BUNDLE, result.getMenuItemKind());
+		verify(menuItemRepository).save(result);
 	}
 
 	@Test
@@ -575,7 +599,7 @@ public class MenuItemServiceTest {
 	}
 
 	@Test
-	void updateMenuItem_draftItem_reachesEventFactoryWithDraftStatus() {
+	void updateMenuItem_draftItem_savesCatalogChangeWithoutCreatingCustomerEvent() {
 		MenuItem item = persistedItem(1L, MenuItemStatus.DRAFT);
 		when(restaurantChainRepository.findById(101L)).thenReturn(Optional.of(mock(RestaurantChain.class)));
 		when(menuItemRepository.findByIdAndRestaurantChainId(701L, 101L)).thenReturn(Optional.of(item));
@@ -585,8 +609,54 @@ public class MenuItemServiceTest {
 		service.updateMenuItem(701L, 101L,
 				new MenuItemUpdateRequest(1L, BigDecimal.valueOf(11), null, null));
 
-		verify(menuItemChangedEventFactory).create(anyLong(), anyLong(), anyLong(), any(), any(), any(),
-				anyLong(), any(), eq(MenuItemStatus.DRAFT), nullable(String.class));
+		verify(menuItemRepository).save(item);
+		verifyNoInteractions(menuItemChangedEventFactory, outboxEventRepository);
+	}
+
+	@Test
+	void updateMenuItem_draftToActive_createsCompleteActivationOutboxEvent() {
+		MenuItem item = persistedItem(1L, MenuItemStatus.DRAFT);
+		MenuItemChangedEvent activation = new MenuItemChangedEvent(
+				UUID.randomUUID(), null, OutboxEventType.MENU_ITEM_ACTIVATED,
+				701L, 101L, 501L, 2L, BigDecimal.TEN, true, true,
+				Instant.parse("2026-01-01T00:00:00Z"), "corr-activation",
+				MenuItemStatus.ACTIVE, "Burger");
+		when(restaurantChainRepository.findById(101L)).thenReturn(Optional.of(mock(RestaurantChain.class)));
+		when(menuItemRepository.findByIdAndRestaurantChainId(701L, 101L)).thenReturn(Optional.of(item));
+		when(menuItemRepository.save(item)).thenReturn(item);
+		when(menuGroupOutletRepository.findOutletIdsByMenuGroupId(201L)).thenReturn(List.of(501L));
+		when(menuItemChangedEventFactory.createMenuItemActivated(
+				anyLong(), anyLong(), anyLong(), any(), any(), any(), anyLong(), anyString(),
+				any(MenuItemStatus.class), anyString())).thenReturn(activation);
+
+		service.updateMenuItem(701L, 101L,
+				new MenuItemUpdateRequest(1L, null, null, null, MenuItemStatus.ACTIVE));
+
+		verify(menuItemChangedEventFactory).createMenuItemActivated(
+				eq(701L), eq(101L), eq(1L), eq(BigDecimal.TEN), eq(true), eq(true),
+				eq(501L), anyString(), eq(MenuItemStatus.ACTIVE), eq("Burger"));
+		ArgumentCaptor<OutboxEvent> outbox = ArgumentCaptor.forClass(OutboxEvent.class);
+		verify(outboxEventRepository).save(outbox.capture());
+		assertEquals(OutboxEventType.MENU_ITEM_ACTIVATED, outbox.getValue().getEventType());
+		assertEquals(OutboxEventStatus.PENDING, outbox.getValue().getStatus());
+	}
+
+	@Test
+	void updateMenuItem_hiddenToActive_includesStoredVisibilityInSparseEvent() {
+		MenuItem item = persistedItem(1L, MenuItemStatus.HIDDEN);
+		when(restaurantChainRepository.findById(101L)).thenReturn(Optional.of(mock(RestaurantChain.class)));
+		when(menuItemRepository.findByIdAndRestaurantChainId(701L, 101L)).thenReturn(Optional.of(item));
+		when(menuItemRepository.save(item)).thenReturn(item);
+		when(menuGroupOutletRepository.findOutletIdsByMenuGroupId(201L)).thenReturn(List.of(501L));
+
+		service.updateMenuItem(701L, 101L,
+				new MenuItemUpdateRequest(1L, null, null, null, MenuItemStatus.ACTIVE));
+
+		ArgumentCaptor<Boolean> visibility = ArgumentCaptor.forClass(Boolean.class);
+		verify(menuItemChangedEventFactory).create(
+				eq(701L), eq(101L), eq(1L), any(), any(), visibility.capture(),
+				eq(501L), anyString(), eq(MenuItemStatus.ACTIVE), nullable(String.class));
+		assertEquals(Boolean.TRUE, visibility.getValue());
 	}
 
 	@Test
@@ -682,7 +752,7 @@ public class MenuItemServiceTest {
 				availabilityCaptor.capture(),
 				visibilityCaptor.capture(),
 				eq(401L),
-				isNull(),
+				anyString(),
 				statusCaptor.capture(),
 				itemNameCaptor.capture());
 
@@ -691,6 +761,8 @@ public class MenuItemServiceTest {
 		assertNull(visibilityCaptor.getValue());
 		assertNull(itemNameCaptor.getValue());
 		assertEquals(MenuItemStatus.ACTIVE, statusCaptor.getValue());
+		verify(bundleRefreshPublisher).publishAncestorBundleRefreshes(
+				eq(701L), eq(101L), anyString());
 
 	}
 

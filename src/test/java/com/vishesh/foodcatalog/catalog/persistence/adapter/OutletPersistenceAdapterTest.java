@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.vishesh.foodcatalog.catalog.persistence.repository.OutletJpaRepository;
+import com.vishesh.foodcatalog.catalog.persistence.mapper.OutletMapper;
 
 @ExtendWith(MockitoExtension.class)
 class OutletPersistenceAdapterTest {
@@ -21,7 +22,7 @@ class OutletPersistenceAdapterTest {
     void existsByIdAndRestaurantChainId_forwardsBothIds() {
         when(repository.existsByIdAndRestaurantChainId(7L, 42L)).thenReturn(true);
 
-        boolean result = new OutletPersistenceAdapter(repository)
+        boolean result = new OutletPersistenceAdapter(repository, new OutletMapper())
                 .existsByIdAndRestaurantChainId(7L, 42L);
 
         assertTrue(result);
@@ -32,7 +33,7 @@ class OutletPersistenceAdapterTest {
     void existsByIdAndRestaurantChainId_returnsFalseWhenJpaReturnsFalse() {
         when(repository.existsByIdAndRestaurantChainId(7L, 42L)).thenReturn(false);
 
-        boolean result = new OutletPersistenceAdapter(repository)
+        boolean result = new OutletPersistenceAdapter(repository, new OutletMapper())
                 .existsByIdAndRestaurantChainId(7L, 42L);
 
         assertFalse(result);

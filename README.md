@@ -36,6 +36,52 @@ configured), and the seasonal range (when configured) must all be active.
 Creating, replacing, or deleting a schedule writes schedule rows and its schedule
 change outbox event in one transaction. Controllers never publish directly to Kafka.
 
+### Bundles and modifiers
+
+Catalog models modifier groups/options separately from products and bundles. A modifier
+configuration event contains the complete replacement group list. A bundle event is
+`BUNDLE_CONFIGURATION_CHANGED` and carries the complete, resolved child tree for each
+affected root/outlet. This lets Effective Menu replace stale child summaries safely
+after a bundle edit or after a reusable child changes. Bundles use their own fixed
+price; children contain ordered ID/name/quantity summaries for customer display.
+
+#### Bundle admin API
+
+Create a meal or combo by sending `"menuItemKind": "BUNDLE"` when creating a
+menu item. Omitting the field remains backward compatible and creates a normal
+`PRODUCT`.
+
+Replace a bundle's complete direct-child list with:
+
+```http
+PUT /api/v1/restaurant-chains/{restaurantChainId}/menu-items/{bundleMenuItemId}/bundle-children
+```
+
+```json
+{
+  "expectedVersion": 0,
+  "children": [
+    { "childMenuItemId": 10, "quantity": 1, "displayOrder": 0 },
+    { "childMenuItemId": 11, "quantity": 1, "displayOrder": 1 }
+  ]
+}
+```
+
+Read the current child list and its version before preparing a later replacement:
+
+```http
+GET /api/v1/restaurant-chains/{restaurantChainId}/menu-items/{bundleMenuItemId}/bundle-children
+```
+
+This is complete replacement, not a partial patch: omitted children are removed,
+listed children are retained or added, and the response returns the next bundle
+version for the following optimistic-locking request. The child relationships and
+their `BUNDLE_CONFIGURATION_CHANGED` outbox event commit or roll back together.
+
+A newly created bundle starts in `DRAFT`, just like any new menu item. Configure
+its children first, then activate it with the returned composition version. This
+ensures the first customer-visible bundle event already contains a complete tree.
+
 ### Health and readiness
 
 ```powershell

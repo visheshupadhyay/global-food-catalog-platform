@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import com.vishesh.foodcatalog.catalog.domain.ChainStatus;
 import com.vishesh.foodcatalog.catalog.domain.MenuItem;
+import com.vishesh.foodcatalog.catalog.domain.MenuItemKind;
 import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
 import com.vishesh.foodcatalog.catalog.persistence.entity.MenuItemEntity;
 
@@ -92,6 +93,21 @@ public class MenuItemMapperTest {
         assertEquals(createdAt, menuItem.getCreatedAt());
         assertEquals(updatedAt, menuItem.getUpdatedAt());
         assertEquals(id, menuItem.getId());
+    }
+
+    @Test
+    void mapsBundleKindInBothDirections() {
+        MenuItem bundle = new MenuItem(501L, "Burger Meal", BigDecimal.valueOf(199),
+                Instant.parse("2026-01-01T10:00:00Z"), 201L, 301L, null,
+                "MEAL-501", MenuItemStatus.DRAFT, true, true, 0L, 101L,
+                Instant.parse("2026-01-01T10:00:00Z"), MenuItemKind.BUNDLE);
+
+        MenuItemMapper mapper = new MenuItemMapper();
+        MenuItemEntity entity = mapper.toEntity(bundle);
+        MenuItem rehydratedBundle = mapper.toDomain(entity);
+
+        assertEquals(MenuItemKind.BUNDLE, entity.getMenuItemKind());
+        assertEquals(MenuItemKind.BUNDLE, rehydratedBundle.getMenuItemKind());
     }
 
     @Test

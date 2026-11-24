@@ -15,7 +15,9 @@ import com.vishesh.foodcatalog.catalog.domain.RestaurantChain;
 
 import jakarta.validation.Valid;
 
-/** Receives HTTP requests about restaurant chains and calls the service layer. */
+/**
+ * Receives HTTP requests about restaurant chains and calls the service layer.
+ */
 @RequestMapping("/api/v1/restaurant-chains")
 @RestController
 public class RestaurantChainController {

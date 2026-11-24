@@ -2,6 +2,8 @@ package com.vishesh.foodcatalog.catalog.api;
 
 import java.math.BigDecimal;
 
+import com.vishesh.foodcatalog.catalog.domain.MenuItemKind;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -21,6 +23,9 @@ public class CreateOutletMenuItemRequest {
     @Positive
     private Long menuCategoryId;
 
+    // Optional: PRODUCT remains the backward-compatible default.
+    private MenuItemKind menuItemKind;
+
     public String getBusinessCode() {
         return businessCode;
     }
@@ -35,6 +40,10 @@ public class CreateOutletMenuItemRequest {
 
     public Long getMenuCategoryId() {
         return menuCategoryId;
+    }
+
+    public MenuItemKind getMenuItemKind() {
+        return menuItemKind;
     }
 
 }

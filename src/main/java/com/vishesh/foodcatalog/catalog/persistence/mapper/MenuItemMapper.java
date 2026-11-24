@@ -6,7 +6,7 @@ import com.vishesh.foodcatalog.catalog.domain.MenuItem;
 import com.vishesh.foodcatalog.catalog.persistence.entity.MenuItemEntity;
 
 /** Converts between business objects and database objects. */
-@Component 
+@Component
 public class MenuItemMapper {
     public MenuItemEntity toEntity(MenuItem domain) {
         // Convert a domain menu item into a row that JPA can save.
@@ -23,7 +23,8 @@ public class MenuItemMapper {
                     domain.getRestaurantChainId(),
                     domain.getMenuGroupId(),
                     domain.getMenuCategoryId(),
-                    domain.getOutletId());
+                    domain.getOutletId(),
+                    domain.getMenuItemKind());
         } else {
             menuItemEntity = new MenuItemEntity(domain.getId(),
                     domain.getItemName(),
@@ -38,7 +39,8 @@ public class MenuItemMapper {
                     domain.isAvailability(),
                     domain.getVersion(),
                     domain.getRestaurantChainId(),
-                    domain.getUpdatedAt());
+                    domain.getUpdatedAt(),
+                    domain.getMenuItemKind());
         }
 
         return menuItemEntity;
@@ -66,7 +68,8 @@ public class MenuItemMapper {
                 entity.isAvailability(),
                 entity.getVersion(),
                 entity.getRestaurantChainId(),
-                entity.getUpdatedAt());
+                entity.getUpdatedAt(),
+                entity.getMenuItemKind());
         return menuItem;
     }
 }
