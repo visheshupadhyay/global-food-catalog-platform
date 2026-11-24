@@ -35,11 +35,12 @@ public class MenuItemScheduleService {
     private final OutboxEventFactory outboxEventFactory;
     private final OutboxEventRepository outboxEvents;
     private final ObjectMapper objectMapper;
+    private final BundleRefreshPublisher bundleRefreshPublisher;
 
     public MenuItemScheduleService(MenuItemRepository menuItems, OutletRepository outlets,
             MenuItemScheduleRepository schedules, MenuItemChangedEventFactory eventFactory,
             OutboxEventFactory outboxEventFactory, OutboxEventRepository outboxEvents,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper, BundleRefreshPublisher bundleRefreshPublisher) {
         this.menuItems = menuItems;
         this.outlets = outlets;
         this.schedules = schedules;
@@ -47,6 +48,7 @@ public class MenuItemScheduleService {
         this.outboxEventFactory = outboxEventFactory;
         this.outboxEvents = outboxEvents;
         this.objectMapper = objectMapper;
+        this.bundleRefreshPublisher = bundleRefreshPublisher;
     }
 
     @Transactional
@@ -99,6 +101,7 @@ public class MenuItemScheduleService {
             throw new IllegalArgumentException("No affected outlets were found for the menu item");
         }
 
+        String correlationId = UUID.randomUUID().toString();
         try {
             for (Long affectedOutletId : affectedOutletIds) {
                 MenuItemSchedule outletSchedule = schedules.find(menuItemId, affectedOutletId)
@@ -114,13 +117,16 @@ public class MenuItemScheduleService {
                 MenuItemChangedEvent event = eventFactory.create(menuItemId,
                         menuItem.getRestaurantChainId(), savedSchedule.getVersion(), null,
                         menuItem.isAvailability(), null,
-                        affectedOutletId, UUID.randomUUID().toString(), menuItem.getStatus(), null,
+                        affectedOutletId, correlationId, menuItem.getStatus(), null,
                         true, savedSchedule.getVersion(), timezone, eventWindows, baseWindows, outletWindows);
                 outboxEvents.save(outboxEventFactory.create(event, objectMapper.writeValueAsString(event)));
             }
         } catch (JacksonException exception) {
             throw new IllegalStateException("Could not serialize schedule change event", exception);
         }
+        bundleRefreshPublisher.publishAncestorBundleRefreshes(
+                menuItemId, menuItem.getRestaurantChainId(), correlationId,
+                outletId == null ? null : List.of(outletId));
         return savedSchedule;
     }
 

@@ -810,7 +810,7 @@ already-combined schedule remain supported as a compatibility path.
 cache-invalidation behavior independently testable without putting all schedule logic
 inside the Kafka event handler.
 
-# D-109 — Seasonal availability uses outlet-local, end-exclusive date ranges
+# D-111 — Seasonal availability uses outlet-local, end-exclusive date ranges
 
 Seasonal availability is an optional date range owned by Catalog. It is evaluated in the
 outlet timezone as `[startDate, endDate)`: the start date is included and the end date is
@@ -818,4 +818,334 @@ excluded. An outlet rule overrides the base rule for that outlet. At customer-re
 Effective Menu Service requires catalog availability, the weekly schedule (if present), and
 the seasonal range (if present) to all be active. Seasonal changes use the transactional
 outbox and evict affected Redis entries through the existing event path.
+
+## 16. Confirmed nested-product, modifier, and bundle decisions
+
+### D-112 — Use separate catalog models for products, modifiers, bundles, and references
+
+**Decision:** model `Product`, `ModifierGroup`, `ModifierOption`, `Bundle`, and
+`ProductReference` as separate concepts rather than placing every possible field in one
+large menu-item table.
+
+**Reason:** a burger, its “Choose extras” group, an “Extra cheese” choice, and a
+Burger Meal have different responsibilities and validation rules.
+
+### D-113 — Modifier groups have one owner and selection bounds
+
+**Decision:** a modifier group belongs to exactly one parent product or bundle. Each
+group defines `minimumSelections` and `maximumSelections`.
+
+**Example:** “Choose a drink” on Burger Meal can require exactly one selection with
+minimum `1` and maximum `1`.
+
+### D-114 — Modifier options are atomic, fixed-price choices
+
+**Decision:** a modifier option contains a name, display order, and optional fixed
+price delta. It cannot reference another product.
+
+**Example:** “Extra cheese” with a `+₹20` delta is a choice, not a nested product.
+
+### D-115 — A modifier option may be selected at most once
+
+**Decision:** a customer can select an option once or not at all; repeated selection
+of the same option is not supported in this release.
+
+**Reason:** this prevents accidental duplicate charges and keeps modifier validation
+clear. “Double cheese” can be added deliberately as a later feature.
+
+### D-116 — Modifier options are selectable whenever their parent is available
+
+**Decision:** modifier options have no independent availability or visibility state in
+this release. If their parent is available, each option is selectable.
+
+**Rule:** if a future stock-aware feature leaves a required modifier group with no
+selectable option, the parent product or bundle becomes unavailable rather than
+allowing the customer to enter an impossible order flow.
+
+### D-117 — Bundles use fixed prices, quantities, and mandatory children
+
+**Decision:** a bundle has its own fixed price. Its child relationships contain an
+explicit quantity, and every child is mandatory.
+
+**Example:** Burger Meal can contain Burger ×1, Fries ×1, and Drink ×1 for a fixed
+₹299, even if the individual components total a different price.
+
+**Rule:** customer choices inside a bundle are represented by normal modifier groups
+attached directly to the bundle, not by a second bundle-choice mechanism.
+
+### D-118 — Bundles may nest, with lifecycle-safe child behavior
+
+**Decision:** a bundle may contain products or other bundles. A required child that is
+unavailable makes its parent bundle visible but unavailable. A required child that is
+hidden or archived removes the parent bundle from the customer menu.
+
+**Reason:** a customer must not order an incomplete meal, and must not see a bundle
+that exposes content the catalog intentionally hides or retires.
+
+### D-119 — Products are reusable but references remain scope-safe
+
+**Decision:** a product may appear in multiple bundles. Shared/base bundles may refer
+only to shared/base products. An outlet-local bundle may refer to shared products and
+products owned by that same outlet, but never to another outlet’s local products.
+
+**Reason:** reuse avoids copies while preserving shared-menu inheritance and outlet
+data isolation.
+
+### D-120 — Bound recursive bundle resolution
+
+**Decision:** enforce a maximum nesting depth of three, at most 25 direct children per
+bundle, and at most 250 resolved components for one customer-facing root item.
+
+**Rule:** cycles are always rejected.
+
+**Reason:** these deliberate limits prevent unsafe recursive structures and keep
+effective-menu calculation, Kafka propagation, and customer response size bounded.
+
+### D-121 — Restaurant-controlled explicit ordering
+
+**Decision:** modifier options and bundle-child relationships use an explicit
+`displayOrder` field controlled by the restaurant.
+
+**Reason:** ordering must be stable and intentional; it must not depend on database
+insertion order or alphabetical sorting.
+
+### D-122 — Removing a bundle child hard-deletes the relationship
+
+**Decision:** removing Fries from Burger Meal permanently deletes the Burger Meal →
+Fries relationship row. It does not delete the Fries product itself.
+
+**Rule:** the existing transactional outbox and append-only audit history retain the
+change evidence. Adding Fries again creates a new relationship row.
+
+### D-123 — Nested changes fan out as new root versions
+
+**Decision:** a nested change creates a new version and event for every affected root
+menu item or bundle and affected outlet. Effective Menu recalculates those roots from
+their complete structure.
+
+**Example:** if reusable Fries changes price, every root that contains Fries, such as
+Burger Meal, Kids Meal, and Family Feast, receives its own newer version and event.
+
+**Reason:** publishing only one parent would leave other reusable-product paths stale.
+
+### D-124 — Customer API returns the resolved nested structure
+
+**Decision:** the existing customer effective-menu response returns nested bundle
+children and modifier groups directly.
+
+**Rule:** the frontend does not reconstruct the tree from flat references or make
+another request merely to open a bundle. The configured depth and fan-out limits bound
+the response size.
+
+### D-125 — Modifier price deltas are non-negative add-on charges
+
+**Decision:** a modifier option has an optional fixed price delta of zero or greater.
+It may add to the parent price but cannot reduce it.
+
+**Example:** Extra cheese may cost `+₹20`; “no cheese for -₹10” is not supported by
+the modifier model. Discounts remain a separate pricing or promotion capability.
+
+### D-126 - Items without modifiers omit the modifier-groups property
+
+**Decision:** the customer effective-menu response omits `modifierGroups` when an
+item has no modifier groups.
+
+**Rules:**
+
+- a modifier event with `modifierConfigurationChanged=true` and non-empty groups
+  replaces the item's complete modifier configuration;
+- a modifier event with `modifierConfigurationChanged=true` and `modifierGroups=[]`
+  intentionally removes every modifier group, so Effective Menu removes the
+  `modifierGroups` property from the item snapshot;
+- an event where `modifierConfigurationChanged` is false does not alter the
+  existing modifier configuration.
+
+**Reason:** omitting the property keeps the customer payload smaller for ordinary
+items that do not have choices. API consumers must therefore interpret a missing
+`modifierGroups` property as an item with no modifier groups.
+
+### D-127 - Customer bundles contain child summaries
+
+**Decision:** a customer-facing bundle contains a lightweight, ordered summary of
+each child: its menu-item ID, name, and quantity. The bundle retains its own fixed
+bundle price; child prices are not added to that price.
+
+**Example:** `Burger Meal` at `₹299` can show `Burger ×1`, `Fries ×1`, and
+`Drink ×1` without the customer application making further Catalog calls.
+
+**Consequence:** when a child name or customer-relevant state changes, the
+affected bundle read models must be refreshed so their copied summaries remain
+correct.
+
+### D-128 - Bundle eligibility follows required-child lifecycle
+
+**Decision:** a bundle is present only when every required child is customer
+visible and not archived, hidden, or draft. If a required child is visible but
+unavailable, the bundle remains visible with `availability=false`.
+
+**Example:** when Fries are sold out, `Burger Meal` remains visible but cannot be
+ordered. When Fries are hidden or archived, `Burger Meal` is removed from the
+customer menu so it cannot reveal or promise the hidden item.
+
+### D-129 - Bundle child response property and replacement semantics
+
+**Decision:** customer-facing bundle components are exposed as `bundleChildren`.
+Every `BUNDLE_CONFIGURATION_CHANGED` event contains a complete replacement tree, so
+Effective Menu replaces the old `bundleChildren` property rather than merging it.
+Internal child lifecycle metadata is persisted only to calculate eligibility and is
+removed before the customer response is returned.
+
+**Reason:** `bundleChildren` distinguishes mandatory meal components from modifier
+choices. Complete replacement guarantees that a removed child cannot remain visible
+because of stale read-model JSON.
+
+### D-130 - Bundle composition uses one complete replacement command
+
+**Decision:** an administrator replaces a bundle's whole direct-child list with one
+optimistic-locking request. Each submitted child has only a menu-item ID, quantity,
+and display order. Existing children that are omitted are removed; submitted children
+are retained or added.
+
+**Reason:** this makes the intended Burger Meal composition unambiguous and prevents
+partial updates from leaving stale child relationships. The Catalog Service remains
+the owner of a child's name, price, and lifecycle, so a composition request cannot
+silently modify those fields.
+
+**Consequence:** the request and response carry the bundle version. Catalog saves
+the changed relationships and `BUNDLE_CONFIGURATION_CHANGED` outbox rows in the same
+transaction, so a failed event write rolls back the relationship change as well.
+
+### D-131 - Effective Menu tracks Catalog ordering per item
+
+**Decision:** Effective Menu stores the latest applied Catalog version internally on
+each materialized top-level item. The outlet snapshot version remains the maximum
+version it has observed, but is not used as the ordering value for a different item.
+
+**Reason:** a single outlet menu contains many independently versioned Catalog
+aggregates. For example, a long-lived Fries update may have version `10`, while a
+new Burger Meal correctly begins at version `1`. Treating `10` as the Burger Meal's
+version would incorrectly discard the new meal as stale.
+
+**Consequence:** a complete bundle event can materialize a previously absent bundle
+root; later updates compare against that root's own stored version. The internal
+version metadata is removed before the customer response is returned.
+
+### D-132 - Explicit complete activation event for first customer visibility
+
+**Decision:** a newly created menu item begins as `DRAFT`. Catalog does not publish a
+customer-facing item event while that item remains `DRAFT`. The transition
+`DRAFT -> ACTIVE` publishes a dedicated `MENU_ITEM_ACTIVATED` event containing a
+complete initial item snapshot.
+
+**Required activation data:** item ID, affected outlet ID, restaurant-chain ID,
+aggregate version, event ID, correlation ID, occurrence time, item name, price,
+availability, visibility, and `ACTIVE` status.
+
+**Rule:** Effective Menu may create a previously unknown top-level item only from a
+complete activation event (or from an existing complete bundle-configuration event).
+A sparse `MENU_ITEM_CHANGED` event for an unknown item is rejected rather than
+creating an incomplete customer-menu entry.
+
+**Reason:** a sparse update such as "price changed to INR 149" cannot safely create a
+Burger because it may omit its name, visibility, and availability. A complete
+activation message establishes a valid read-model item before later sparse updates
+are allowed.
+
+**Lifecycle consequence:** `HIDDEN -> ACTIVE` remains a normal sparse item-change
+event because the item already exists in Effective Menu. That lifecycle event carries
+the item's stored visibility so the consumer can restore its correct customer-facing
+visibility.
+
+### D-133 - One-time outlet menu onboarding uses a complete event
+
+**Decision:** an outlet is configured while it is `DRAFT`: it receives one menu
+group, any allowed outlet-local items and sparse overrides, and then becomes
+`ACTIVE`. Its menu-group assignment is immutable after activation in the current
+scope. The `DRAFT -> ACTIVE` transition publishes one complete
+`OUTLET_MENU_INITIALIZED` event through the transactional outbox.
+
+**Payload:** the event contains the outlet ID, restaurant-chain ID, outlet
+timezone, event ID, correlation ID, occurrence time, and the complete resolved
+starting menu. That menu includes inherited shared items with overrides already
+applied, outlet-local items, and all customer-relevant schedule, seasonal,
+modifier, bundle, lifecycle, and per-item-version data.
+
+**Reason:** Effective Menu must create an entire correct outlet snapshot before it
+can apply later small item events. Sending only the first Burger would risk a
+customer seeing Burger while the outlet's Pizza, Fries, or local items are still
+missing.
+
+**Customer availability:** before Effective Menu processes the onboarding event,
+there is no snapshot and the customer API returns `503` rather than an incomplete
+menu. After the snapshot exists, normal reads return `200`.
+
+**Idempotency:** Kafka redelivery of the same onboarding `eventId` is ignored using
+the existing processed-event record. It must not rewrite the snapshot or evict the
+cache a second time.
+
+**Future boundary:** menu-group reassignment after activation is deliberately out
+of scope. If required later, it needs a separately versioned full-menu
+resynchronization design rather than silently reusing onboarding.
+
+### D-134 - A draft outlet is created with its menu group in one request
+
+**Decision:** the Catalog API creates a `DRAFT` outlet and assigns its required
+menu group in the same request and transaction. Activation remains a separate,
+explicit operation.
+
+**Example:** creating "Burger House Indiranagar" with menu group
+"Bangalore Burger Menu" creates both the outlet and its menu-group relationship
+together. The outlet cannot exist as an accidentally unconfigured draft outlet.
+
+**Reason:** the current scope permits exactly one immutable menu-group assignment
+per outlet. A separate assignment endpoint would add an incomplete intermediate
+state without providing a benefit we need yet.
+
+**Consequence:** the create request must validate that the menu group exists and
+belongs to the same restaurant chain as the outlet. It creates no onboarding
+outbox event; only the later `DRAFT -> ACTIVE` transition does that.
+
+### D-135 - Onboarding carries each item's real Catalog version
+
+**Decision:** every item in an `OUTLET_MENU_INITIALIZED` event carries that
+item's own current Catalog aggregate version. Effective Menu persists that
+number as the item's internal `_catalogVersion` when it creates the first
+outlet snapshot.
+
+**Example:** Outlet 25 is onboarded with Burger at Catalog version `8`. A
+delayed Burger update at version `5` arrives after onboarding. Effective Menu
+compares `5` with the stored `8` and ignores the delayed update.
+
+**Reason:** the outlet snapshot version is not a substitute for an individual
+item's version: one menu contains many independently versioned items.
+
+### D-136 - A late outlet-initialization event never overwrites an existing snapshot
+
+**Decision:** Effective Menu creates a snapshot only when it receives a valid
+`OUTLET_MENU_INITIALIZED` event for an outlet that has no snapshot. If a
+different, delayed, or replayed initialization event arrives after a snapshot
+already exists, Effective Menu records it as processed/stale and leaves the
+existing snapshot and Redis cache unchanged.
+
+**Rule:** exact Kafka redelivery with the same event ID remains a normal
+duplicate and is ignored through the processed-event record. A different
+initialization event for an already initialized outlet is also ignored safely.
+
+**Reason:** an old complete menu must never roll an outlet back over newer
+price, availability, schedule, modifier, or bundle updates.
+
+### D-137 - Concrete outlet events use the outlet as their Kafka key
+
+**Decision:** every Catalog event that targets one concrete outlet, including
+`OUTLET_MENU_INITIALIZED` and subsequent menu-item, schedule, seasonal,
+modifier, and bundle changes for that outlet, uses `outletId` as its Kafka
+message key.
+
+**Reason:** Kafka preserves order within one key's partition. Keeping the
+onboarding event and later Outlet 25 events under the same key means Effective
+Menu receives their intended outlet order.
+
+**Guardrail:** version checks remain mandatory. Kafka ordering does not protect
+against old records that are replayed later, manual re-drives, or events from
+older system behaviour.
 

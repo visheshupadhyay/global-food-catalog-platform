@@ -3,6 +3,7 @@ package com.vishesh.foodcatalog.catalog.persistence.entity;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+import com.vishesh.foodcatalog.catalog.domain.MenuItemKind;
 import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
 
 import jakarta.persistence.Column;
@@ -64,6 +65,10 @@ public class MenuItemEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "menu_item_kind", nullable = false)
+    private MenuItemKind menuItemKind;
+
     protected MenuItemEntity() {
     }
 
@@ -75,8 +80,22 @@ public class MenuItemEntity {
             Long menuCategoryId,
             Long outletId) {
 
+        this(businessCode, itemName, itemPrice, restaurantChainId, menuGroupId,
+                menuCategoryId, outletId, MenuItemKind.PRODUCT);
+    }
+
+    public MenuItemEntity(String businessCode,
+            String itemName,
+            BigDecimal itemPrice,
+            Long restaurantChainId,
+            Long menuGroupId,
+            Long menuCategoryId,
+            Long outletId,
+            MenuItemKind menuItemKind) {
+
         validateCommonFields(businessCode, itemName, itemPrice, restaurantChainId,
                 menuGroupId, menuCategoryId, outletId, MenuItemStatus.DRAFT, 0L);
+        validateMenuItemKind(menuItemKind);
 
         businessCode = businessCode.trim();
         itemName = itemName.trim();
@@ -96,11 +115,21 @@ public class MenuItemEntity {
         this.version = 0L;
         this.restaurantChainId = restaurantChainId;
         this.updatedAt = now;
+        this.menuItemKind = menuItemKind;
     }
 
     public MenuItemEntity(Long id, String itemName, BigDecimal itemPrice, Instant createdAt, Long menuGroupId,
             Long menuCategoryId, Long outletId, String businessCode, MenuItemStatus status, boolean visibility,
             boolean availability, Long version, Long restaurantChainId, Instant updatedAt) {
+
+        this(id, itemName, itemPrice, createdAt, menuGroupId, menuCategoryId, outletId,
+                businessCode, status, visibility, availability, version, restaurantChainId,
+                updatedAt, MenuItemKind.PRODUCT);
+    }
+
+    public MenuItemEntity(Long id, String itemName, BigDecimal itemPrice, Instant createdAt, Long menuGroupId,
+            Long menuCategoryId, Long outletId, String businessCode, MenuItemStatus status, boolean visibility,
+            boolean availability, Long version, Long restaurantChainId, Instant updatedAt, MenuItemKind menuItemKind) {
 
         validateCommonFields(businessCode, itemName, itemPrice, restaurantChainId,
                 menuGroupId, menuCategoryId, outletId, status, version);
@@ -115,6 +144,8 @@ public class MenuItemEntity {
         if (createdAt == null || updatedAt == null) {
             throw new IllegalArgumentException("Timestamps should be present");
         }
+
+        validateMenuItemKind(menuItemKind);
 
         itemName = itemName.trim();
         businessCode = businessCode.trim();
@@ -132,6 +163,7 @@ public class MenuItemEntity {
         this.version = version;
         this.restaurantChainId = restaurantChainId;
         this.updatedAt = updatedAt;
+        this.menuItemKind = menuItemKind;
     }
 
     private static void validateCommonFields(
@@ -174,6 +206,12 @@ public class MenuItemEntity {
         }
         if (version == null || version < 0) {
             throw new IllegalArgumentException("Version must be zero or greater");
+        }
+    }
+
+    private static void validateMenuItemKind(MenuItemKind menuItemKind) {
+        if (menuItemKind == null) {
+            throw new IllegalArgumentException("Menu item kind must be present");
         }
     }
 
@@ -231,6 +269,10 @@ public class MenuItemEntity {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public MenuItemKind getMenuItemKind() {
+        return menuItemKind;
     }
 
 }

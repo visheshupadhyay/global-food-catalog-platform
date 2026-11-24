@@ -11,6 +11,7 @@ import java.util.Currency;
  * availability, and outlet-only items.
  */
 public class Outlet {
+    private Long id;
     private Long restaurantChainId;
     private String displayName;
     private String outletCode;
@@ -19,6 +20,7 @@ public class Outlet {
     private Instant createdAt;
     private Instant updatedAt;
     private String timezone;
+    private Long version;
 
     /** Backward-compatible constructor; existing outlets use UTC until configured otherwise. */
     public Outlet(Long restaurantChainId,
@@ -83,6 +85,67 @@ public class Outlet {
         } catch (DateTimeException exception) {
             throw new IllegalArgumentException("Timezone must be a valid IANA timezone", exception);
         }
+        this.version = 0L;
+    }
+
+    /**
+     * Rebuilds an outlet that already exists in PostgreSQL. New outlets use the
+     * shorter constructors above; persistence uses this constructor instead.
+     */
+    public Outlet(Long id,
+            Long restaurantChainId,
+            String displayName,
+            String outletCode,
+            Currency currency,
+            ChainStatus status,
+            Instant createdAt,
+            Instant updatedAt,
+            String timezone,
+            Long version) {
+
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("Outlet ID must be positive");
+        }
+        if (restaurantChainId == null || restaurantChainId <= 0) {
+            throw new IllegalArgumentException("Restaurant chain ID must be positive");
+        }
+        if (displayName == null || displayName.isBlank()) {
+            throw new IllegalArgumentException("Display name cannot be blank");
+        }
+        if (outletCode == null || outletCode.isBlank()) {
+            throw new IllegalArgumentException("Outlet code cannot be blank");
+        }
+        if (currency == null) {
+            throw new IllegalArgumentException("Currency cannot be null");
+        }
+        if (status == null) {
+            throw new IllegalArgumentException("Status cannot be null");
+        }
+        if (createdAt == null || updatedAt == null) {
+            throw new IllegalArgumentException("Timestamps cannot be null");
+        }
+        if (timezone == null || timezone.isBlank()) {
+            throw new IllegalArgumentException("Timezone cannot be blank");
+        }
+        if (version == null || version < 0) {
+            throw new IllegalArgumentException("Version must be zero or greater");
+        }
+
+        try {
+            this.timezone = ZoneId.of(timezone.trim()).toString();
+        } catch (DateTimeException exception) {
+            throw new IllegalArgumentException("Timezone must be a valid IANA timezone", exception);
+        }
+
+        this.id = id;
+        this.restaurantChainId = restaurantChainId;
+        this.displayName = displayName.trim();
+        this.outletCode = outletCode.trim();
+        this.currency = currency;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.version = version;
     }
 
     public void restoreFromArchive() {
@@ -121,6 +184,10 @@ public class Outlet {
         return restaurantChainId;
     }
 
+    public Long getId() {
+        return id;
+    }
+
     public String getDisplayName() {
         return displayName;
     }
@@ -147,6 +214,10 @@ public class Outlet {
 
     public String getTimezone() {
         return timezone;
+    }
+
+    public Long getVersion() {
+        return version;
     }
 
 }

@@ -205,4 +205,17 @@ public class OutletTest {
         assertEquals(lastUpdated, currentUpdated);
 
     }
+
+    @Test
+    void rehydratesStoredOutletWithIdAndVersion() {
+        Instant storedAt = Instant.parse("2026-11-23T10:00:00Z");
+
+        Outlet outlet = new Outlet(45L, 10L, "Berlin Mitte", "BERLIN-MITTE",
+                Currency.getInstance("EUR"), ChainStatus.DRAFT, storedAt, storedAt,
+                "Europe/Berlin", 3L);
+
+        assertEquals(45L, outlet.getId());
+        assertEquals(3L, outlet.getVersion());
+        assertEquals("Europe/Berlin", outlet.getTimezone());
+    }
 }

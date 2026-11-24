@@ -29,10 +29,12 @@ public class MenuItemSeasonalAvailabilityService {
     private final OutboxEventFactory outboxFactory;
     private final OutboxEventRepository outboxEvents;
     private final ObjectMapper objectMapper;
+    private final BundleRefreshPublisher bundleRefreshPublisher;
 
     public MenuItemSeasonalAvailabilityService(MenuItemRepository menuItems, OutletRepository outlets,
             MenuItemSeasonalAvailabilityRepository seasons, MenuItemChangedEventFactory eventFactory,
-            OutboxEventFactory outboxFactory, OutboxEventRepository outboxEvents, ObjectMapper objectMapper) {
+            OutboxEventFactory outboxFactory, OutboxEventRepository outboxEvents, ObjectMapper objectMapper,
+            BundleRefreshPublisher bundleRefreshPublisher) {
         this.menuItems = menuItems;
         this.outlets = outlets;
         this.seasons = seasons;
@@ -40,6 +42,7 @@ public class MenuItemSeasonalAvailabilityService {
         this.outboxFactory = outboxFactory;
         this.outboxEvents = outboxEvents;
         this.objectMapper = objectMapper;
+        this.bundleRefreshPublisher = bundleRefreshPublisher;
     }
 
     @Transactional
@@ -67,6 +70,7 @@ public class MenuItemSeasonalAvailabilityService {
                 : List.of(request.outletId());
         if (affected.isEmpty())
             throw new IllegalArgumentException("No affected outlets were found for the menu item");
+        String correlationId = UUID.randomUUID().toString();
         try {
             for (Long outletId : affected) {
                 MenuItemSeasonalAvailability outletSeason = seasons.find(menuItemId, outletId).orElse(null);
@@ -75,7 +79,7 @@ public class MenuItemSeasonalAvailabilityService {
                 String timezone = outlets.findTimezoneById(outletId)
                         .orElseThrow(() -> new IllegalArgumentException("Outlet was not found"));
                 MenuItemChangedEvent event = eventFactory.createSeasonalAvailabilityChanged(menuItemId,
-                        menuItem.getRestaurantChainId(), menuItem.getVersion(), saved.getVersion(), outletId, UUID.randomUUID().toString(),
+                        menuItem.getRestaurantChainId(), menuItem.getVersion(), saved.getVersion(), outletId, correlationId,
                         menuItem.getStatus(), menuItem.isAvailability(), timezone,
                         effective == null ? null : effective.getStartDate(),
                         effective == null ? null : effective.getEndDate());
@@ -84,6 +88,9 @@ public class MenuItemSeasonalAvailabilityService {
         } catch (JacksonException exception) {
             throw new IllegalStateException("Could not serialize seasonal availability event", exception);
         }
+        bundleRefreshPublisher.publishAncestorBundleRefreshes(
+                menuItemId, menuItem.getRestaurantChainId(), correlationId,
+                request.outletId() == null ? null : List.of(request.outletId()));
         return saved;
     }
 

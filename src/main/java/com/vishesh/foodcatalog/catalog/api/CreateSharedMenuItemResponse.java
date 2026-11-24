@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
+import com.vishesh.foodcatalog.catalog.domain.MenuItemKind;
 
 /**
  * CreateSharedMenuItemResponse
@@ -19,5 +20,6 @@ public record CreateSharedMenuItemResponse(Long id,
         Instant updatedAt,
         Long outletId,
         Long menuGroupId,
-        Long menuCategoryId) {
+        Long menuCategoryId,
+        MenuItemKind menuItemKind) {
 }

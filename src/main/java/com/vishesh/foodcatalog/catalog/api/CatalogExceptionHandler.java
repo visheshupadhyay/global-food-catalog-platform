@@ -9,11 +9,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.vishesh.foodcatalog.catalog.application.DuplicateBusinessCodeException;
 import com.vishesh.foodcatalog.catalog.application.DuplicateMenuGroupException;
 import com.vishesh.foodcatalog.catalog.application.DuplicateMenuItemException;
+import com.vishesh.foodcatalog.catalog.application.DuplicateOutletCodeException;
 import com.vishesh.foodcatalog.catalog.application.MenuGroupNotFoundException;
 import com.vishesh.foodcatalog.catalog.application.MenuGroupVersionConflictException;
 import com.vishesh.foodcatalog.catalog.application.MenuItemNotFoundException;
 import com.vishesh.foodcatalog.catalog.application.MenuItemVersionConflictException;
 import com.vishesh.foodcatalog.catalog.application.OutletNotFoundException;
+import com.vishesh.foodcatalog.catalog.application.OutletVersionConflictException;
 import com.vishesh.foodcatalog.catalog.application.RestaurantChainNotFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -107,6 +109,14 @@ public class CatalogExceptionHandler {
         return ResponseEntity.status(status).body(apiError);
     }
 
+    @ExceptionHandler(DuplicateOutletCodeException.class)
+    public ResponseEntity<ApiError> handleDuplicateOutletCode(
+            DuplicateOutletCodeException exception,
+            HttpServletRequest servletRequest) {
+        ApiError apiError = new ApiError(HttpStatus.CONFLICT.value(), exception.getMessage(), servletRequest.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
+    }
+
     @ExceptionHandler(OutletNotFoundException.class)
     public ResponseEntity<ApiError> handleOutletNotFound(
             OutletNotFoundException exception,
@@ -119,6 +129,14 @@ public class CatalogExceptionHandler {
 
         ApiError apiError = new ApiError(status, message, path);
         return ResponseEntity.status(status).body(apiError);
+    }
+
+    @ExceptionHandler(OutletVersionConflictException.class)
+    public ResponseEntity<ApiError> handleOutletVersionConflict(
+            OutletVersionConflictException exception,
+            HttpServletRequest request) {
+        ApiError error = new ApiError(409, exception.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     @ExceptionHandler(MenuGroupNotFoundException.class)

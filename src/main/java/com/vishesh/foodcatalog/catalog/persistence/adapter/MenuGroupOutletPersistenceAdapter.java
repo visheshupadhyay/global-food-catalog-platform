@@ -1,6 +1,7 @@
 package com.vishesh.foodcatalog.catalog.persistence.adapter;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
 
@@ -22,6 +23,25 @@ public class MenuGroupOutletPersistenceAdapter implements MenuGroupOutletReposit
             throw new IllegalArgumentException("Menu group ID must be positive");
         }
         return repository.findOutletIdsByMenuGroupId(menuGroupId);
+    }
+
+    @Override
+    public Optional<Long> findMenuGroupIdByOutletId(Long outletId) {
+        if (outletId == null || outletId <= 0) {
+            throw new IllegalArgumentException("Outlet ID must be positive");
+        }
+        return repository.findMenuGroupIdByOutletId(outletId);
+    }
+
+    @Override
+    public void assignMenuGroupToOutlet(Long menuGroupId, Long outletId) {
+        if (menuGroupId == null || menuGroupId <= 0) {
+            throw new IllegalArgumentException("Menu group ID must be positive");
+        }
+        if (outletId == null || outletId <= 0) {
+            throw new IllegalArgumentException("Outlet ID must be positive");
+        }
+        repository.assignMenuGroupToOutlet(menuGroupId, outletId);
     }
     
 }

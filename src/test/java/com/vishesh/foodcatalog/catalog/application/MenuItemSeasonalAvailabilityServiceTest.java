@@ -38,6 +38,8 @@ class MenuItemSeasonalAvailabilityServiceTest {
     OutboxEventRepository outboxEvents;
     @Mock
     ObjectMapper objectMapper;
+    @Mock
+    BundleRefreshPublisher bundleRefreshPublisher;
 
     @Test
     void save_baseSeason_createsOutboxForEveryAffectedOutlet() throws Exception {
@@ -60,7 +62,7 @@ class MenuItemSeasonalAvailabilityServiceTest {
                 anyLong(),
                 anyString(), any(), anyBoolean(), anyString(), any(), any())).thenReturn(event);
         when(objectMapper.writeValueAsString(event)).thenReturn("{}");
-        when(outboxFactory.create(any(), anyString())).thenReturn(mock(OutboxEvent.class));
+        when(outboxFactory.create(any(MenuItemChangedEvent.class), anyString())).thenReturn(mock(OutboxEvent.class));
 
         MenuItemSeasonalAvailability result = service().save(101L,
                 new SeasonalAvailabilityRequest(null, LocalDate.of(2026, 10, 15),
@@ -68,6 +70,7 @@ class MenuItemSeasonalAvailabilityServiceTest {
 
         assertEquals(saved, result);
         verify(outboxEvents, times(2)).save(any(OutboxEvent.class));
+        verify(bundleRefreshPublisher).publishAncestorBundleRefreshes(eq(101L), eq(7L), anyString(), isNull());
     }
 
     @Test
@@ -84,7 +87,7 @@ class MenuItemSeasonalAvailabilityServiceTest {
 
     private MenuItemSeasonalAvailabilityService service() {
         return new MenuItemSeasonalAvailabilityService(menuItems, outlets, seasons, eventFactory,
-                outboxFactory, outboxEvents, objectMapper);
+                outboxFactory, outboxEvents, objectMapper, bundleRefreshPublisher);
     }
 
     private MenuItem item() {

@@ -1,6 +1,7 @@
 package com.vishesh.foodcatalog.catalog.event.application;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -14,7 +15,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.vishesh.foodcatalog.catalog.event.domain.MenuItemChangedEvent;
 import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventType;
+import com.vishesh.foodcatalog.catalog.event.domain.EventModifierGroup;
+import com.vishesh.foodcatalog.catalog.event.domain.EventModifierOption;
+import com.vishesh.foodcatalog.catalog.event.domain.EventBundleChild;
+import com.vishesh.foodcatalog.catalog.event.domain.EventBundleSnapshot;
 import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
+import com.vishesh.foodcatalog.catalog.domain.MenuItemKind;
 
 class MenuItemChangedEventFactoryTest {
 
@@ -100,6 +106,37 @@ class MenuItemChangedEventFactoryTest {
     }
 
     @Test
+    void createMenuItemActivated_createsCompleteInitialItemSnapshot() {
+        MenuItemChangedEvent event = factory.createMenuItemActivated(
+                ITEM_ID, CHAIN_ID, VERSION, new BigDecimal("149.00"), true, true,
+                OUTLET_ID, "corr-activation", MenuItemStatus.ACTIVE, "Veg Burger");
+
+        assertEquals(OutboxEventType.MENU_ITEM_ACTIVATED, event.getEventType());
+        assertEquals(ITEM_ID, event.getItemId());
+        assertEquals(CHAIN_ID, event.getRestaurantChainId());
+        assertEquals(OUTLET_ID, event.getOutletId());
+        assertEquals(VERSION, event.getAggregateVersion());
+        assertEquals("Veg Burger", event.getItemName());
+        assertEquals(new BigDecimal("149.00"), event.getPrice());
+        assertEquals(Boolean.TRUE, event.getAvailability());
+        assertEquals(Boolean.TRUE, event.getVisibility());
+        assertEquals(MenuItemStatus.ACTIVE, event.getStatus());
+        assertEquals("corr-activation", event.getCorrelationId());
+    }
+
+    @Test
+    void createMenuItemActivated_rejectsIncompleteOrNonActivePayload() {
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.createMenuItemActivated(
+                        ITEM_ID, CHAIN_ID, VERSION, null, true, true,
+                        OUTLET_ID, null, MenuItemStatus.ACTIVE, "Veg Burger"));
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.createMenuItemActivated(
+                        ITEM_ID, CHAIN_ID, VERSION, BigDecimal.ONE, true, true,
+                        OUTLET_ID, null, MenuItemStatus.HIDDEN, "Veg Burger"));
+    }
+
+    @Test
     void create_withoutOutlet_createsSharedMenuItemEvent() {
         MenuItemChangedEvent event = factory.create(
                 ITEM_ID, CHAIN_ID, VERSION, new BigDecimal("10.00"), null, null,
@@ -179,5 +216,75 @@ class MenuItemChangedEventFactoryTest {
         assertEquals(ITEM_ID + ":" + OUTLET_ID, event.getScheduleId());
         assertNull(event.getPrice());
         assertNull(event.getAvailability());
+    }
+
+    @Test
+    void createModifierConfigurationChanged_createsFullModifierSnapshot() {
+        EventModifierGroup extras = new EventModifierGroup(201L, "Choose extras", 0, 2, 0,
+                List.of(new EventModifierOption(301L, "Extra cheese", BigDecimal.valueOf(20), 0),
+                        new EventModifierOption(302L, "Bacon", BigDecimal.valueOf(50), 1)));
+
+        MenuItemChangedEvent event = factory.createModifierConfigurationChanged(
+                ITEM_ID, CHAIN_ID, VERSION, OUTLET_ID, "corr-modifiers", MenuItemStatus.ACTIVE,
+                "Veg Burger", List.of(extras));
+
+        assertEquals(OutboxEventType.MODIFIER_CONFIGURATION_CHANGED, event.getEventType());
+        assertEquals(Boolean.TRUE, event.getModifierConfigurationChanged());
+        assertEquals(1, event.getModifierGroups().size());
+        assertEquals("Choose extras", event.getModifierGroups().getFirst().groupName());
+        assertEquals(2, event.getModifierGroups().getFirst().options().size());
+        assertNull(event.getPrice());
+        assertNull(event.getAvailability());
+        assertNull(event.getVisibility());
+        assertEquals(Boolean.FALSE, event.getScheduleChanged());
+        assertEquals(Boolean.FALSE, event.getSeasonalAvailabilityChanged());
+    }
+
+    @Test
+    void createModifierConfigurationChanged_allowsEmptyGroupSnapshot() {
+        MenuItemChangedEvent event = factory.createModifierConfigurationChanged(
+                ITEM_ID, CHAIN_ID, VERSION, OUTLET_ID, null, MenuItemStatus.ACTIVE,
+                "Veg Burger", List.of());
+
+        assertEquals(Boolean.TRUE, event.getModifierConfigurationChanged());
+        assertEquals(List.of(), event.getModifierGroups());
+    }
+
+    @Test
+    void createModifierConfigurationChanged_rejectsNullGroupSnapshot() {
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.createModifierConfigurationChanged(
+                        ITEM_ID, CHAIN_ID, VERSION, OUTLET_ID, null, MenuItemStatus.ACTIVE,
+                        "Veg Burger", null));
+    }
+
+    @Test
+    void createBundleConfigurationChanged_createsCompleteBundleSnapshot() {
+        EventBundleSnapshot bundleSnapshot = new EventBundleSnapshot(ITEM_ID, "Burger Meal",
+                BigDecimal.valueOf(299), List.of(
+                        new EventBundleChild(201L, "Burger", MenuItemKind.PRODUCT, 1, 0,
+                                MenuItemStatus.ACTIVE, true, true, List.of()),
+                        new EventBundleChild(202L, "Fries", MenuItemKind.PRODUCT, 1, 1,
+                                MenuItemStatus.ACTIVE, true, true, List.of())));
+
+        MenuItemChangedEvent event = factory.createBundleConfigurationChanged(
+                ITEM_ID, CHAIN_ID, VERSION, OUTLET_ID, "corr-bundle", MenuItemStatus.ACTIVE,
+                "Burger Meal", bundleSnapshot);
+
+        assertEquals(OutboxEventType.BUNDLE_CONFIGURATION_CHANGED, event.getEventType());
+        assertEquals(Boolean.TRUE, event.getBundleConfigurationChanged());
+        assertEquals(bundleSnapshot, event.getBundleSnapshot());
+        assertEquals(Boolean.FALSE, event.getModifierConfigurationChanged());
+        assertNull(event.getPrice());
+    }
+
+    @Test
+    void createBundleConfigurationChanged_rejectsSnapshotForAnotherItem() {
+        EventBundleSnapshot otherBundle = new EventBundleSnapshot(999L, "Other Meal", BigDecimal.ONE, List.of());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.createBundleConfigurationChanged(
+                        ITEM_ID, CHAIN_ID, VERSION, OUTLET_ID, null, MenuItemStatus.ACTIVE,
+                        "Burger Meal", otherBundle));
     }
 }

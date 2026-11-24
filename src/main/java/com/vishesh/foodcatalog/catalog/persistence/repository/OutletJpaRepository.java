@@ -8,5 +8,6 @@ import com.vishesh.foodcatalog.catalog.persistence.entity.OutletEntity;
 /** Spring Data derives the ownership query from this method name. */
 public interface OutletJpaRepository extends JpaRepository<OutletEntity, Long> {
     boolean existsByIdAndRestaurantChainId(Long outletId, Long restaurantChainId);
+    boolean existsByRestaurantChainIdAndOutletCode(Long restaurantChainId, String outletCode);
     Optional<OutletEntity> findById(Long outletId);
 }
