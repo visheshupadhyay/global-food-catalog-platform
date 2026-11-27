@@ -10,40 +10,40 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
 public class CreateOutletMenuItemRequest {
-    @NotBlank
-    private String businessCode;
+	@NotBlank
+	private String businessCode;
 
-    @NotBlank
-    private String itemName;
+	@NotBlank
+	private String itemName;
 
-    @NotNull 
-    @PositiveOrZero
-    private BigDecimal itemPrice;
+	@NotNull
+	@PositiveOrZero
+	private BigDecimal itemPrice;
 
-    @Positive
-    private Long menuCategoryId;
+	@Positive
+	private Long menuCategoryId;
 
-    // Optional: PRODUCT remains the backward-compatible default.
-    private MenuItemKind menuItemKind;
+	// Optional: PRODUCT remains the backward-compatible default.
+	private MenuItemKind menuItemKind;
 
-    public String getBusinessCode() {
-        return businessCode;
-    }
+	public String getBusinessCode() {
+		return businessCode;
+	}
 
-    public String getItemName() {
-        return itemName;
-    }
+	public String getItemName() {
+		return itemName;
+	}
 
-    public BigDecimal getItemPrice() {
-        return itemPrice;
-    }
+	public BigDecimal getItemPrice() {
+		return itemPrice;
+	}
 
-    public Long getMenuCategoryId() {
-        return menuCategoryId;
-    }
+	public Long getMenuCategoryId() {
+		return menuCategoryId;
+	}
 
-    public MenuItemKind getMenuItemKind() {
-        return menuItemKind;
-    }
+	public MenuItemKind getMenuItemKind() {
+		return menuItemKind;
+	}
 
 }

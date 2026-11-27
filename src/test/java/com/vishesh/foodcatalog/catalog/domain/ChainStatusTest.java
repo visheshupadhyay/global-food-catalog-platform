@@ -9,24 +9,22 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 public class ChainStatusTest {
-    @Test
-    void hasExactlyThreeStatuses() {
-        assertEquals(3, ChainStatus.values().length);
-    }
+	@Test
+	void hasExactlyThreeStatuses() {
+		assertEquals(3, ChainStatus.values().length);
+	}
 
-    @Test
-    void eachExpectedStatusExists() {
-        assertNotNull(ChainStatus.valueOf("DRAFT"));
-        assertNotNull(ChainStatus.valueOf("ACTIVE"));
-        assertNotNull(ChainStatus.valueOf("ARCHIVED"));
-    }
+	@Test
+	void eachExpectedStatusExists() {
+		assertNotNull(ChainStatus.valueOf("DRAFT"));
+		assertNotNull(ChainStatus.valueOf("ACTIVE"));
+		assertNotNull(ChainStatus.valueOf("ARCHIVED"));
+	}
 
-    @Test
-    void enumNamesAreExactlyDraftActiveAndArchived() {
-        List<String> names = Arrays.stream(ChainStatus.values())
-                .map(Enum::name)
-                .toList();
+	@Test
+	void enumNamesAreExactlyDraftActiveAndArchived() {
+		List<String> names = Arrays.stream(ChainStatus.values()).map(Enum::name).toList();
 
-        assertEquals(List.of("DRAFT", "ACTIVE", "ARCHIVED"), names);
-    }
+		assertEquals(List.of("DRAFT", "ACTIVE", "ARCHIVED"), names);
+	}
 }

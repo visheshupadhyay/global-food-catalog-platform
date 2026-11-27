@@ -3,11 +3,11 @@ package com.vishesh.foodcatalog.catalog.effective.persistence.projection;
 import java.math.BigDecimal;
 
 public interface OutletOverrideProjection {
-    Long getMenuItemId();
+	Long getMenuItemId();
 
-    BigDecimal getPriceOverride();
+	BigDecimal getPriceOverride();
 
-    Boolean getAvailableOverride();
+	Boolean getAvailableOverride();
 
-    Boolean getVisibleOverride();
+	Boolean getVisibleOverride();
 }

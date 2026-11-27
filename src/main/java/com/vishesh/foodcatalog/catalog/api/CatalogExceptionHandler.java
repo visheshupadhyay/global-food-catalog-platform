@@ -1,6 +1,7 @@
 package com.vishesh.foodcatalog.catalog.api;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,163 +24,93 @@ import jakarta.servlet.http.HttpServletRequest;
 /** Turns business failures into small, predictable HTTP error responses. */
 @RestControllerAdvice
 public class CatalogExceptionHandler {
-    // Converts Java exceptions into simple HTTP error responses for API clients.
 
-    @ExceptionHandler(DuplicateBusinessCodeException.class)
-    public ResponseEntity<ApiError> handleDuplicateBusinessCode(
-            DuplicateBusinessCodeException exception,
-            HttpServletRequest servletRequest) {
+	@ExceptionHandler(DuplicateBusinessCodeException.class)
+	public ResponseEntity<ApiError> handleDuplicateBusinessCode(DuplicateBusinessCodeException exception,
+			HttpServletRequest request) {
+		return error(HttpStatus.CONFLICT, exception, request);
+	}
 
-        // A duplicate conflicts with data that already exists.
-        int status = HttpStatus.CONFLICT.value();
-        String message = exception.getMessage();
-        String path = servletRequest.getRequestURI();
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ResponseEntity<ApiError> handleValidationError(MethodArgumentNotValidException exception,
+			HttpServletRequest request) {
+		return error(exception.getStatusCode(), exception, request);
+	}
 
-        ApiError apiError = new ApiError(status, message, path);
-        return ResponseEntity.status(status).body(apiError);
-    }
+	@ExceptionHandler(IllegalArgumentException.class)
+	public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException exception,
+			HttpServletRequest request) {
+		return error(HttpStatus.BAD_REQUEST, exception, request);
+	}
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiError> handleValidationError(
-            MethodArgumentNotValidException exception,
-            HttpServletRequest servletRequest) {
+	@ExceptionHandler(RestaurantChainNotFoundException.class)
+	public ResponseEntity<ApiError> handleRestaurantChainNotFound(RestaurantChainNotFoundException exception,
+			HttpServletRequest request) {
+		return error(HttpStatus.NOT_FOUND, exception, request);
+	}
 
-        // Invalid request fields should be reported as Bad Request.
-        int status = exception.getStatusCode().value();
-        String message = exception.getMessage();
-        String path = servletRequest.getRequestURI();
+	@ExceptionHandler(DuplicateMenuGroupException.class)
+	public ResponseEntity<ApiError> handleDuplicateMenuGroup(DuplicateMenuGroupException exception,
+			HttpServletRequest request) {
+		return error(HttpStatus.CONFLICT, exception, request);
+	}
 
-        ApiError apiError = new ApiError(status, message, path);
-        return ResponseEntity.status(exception.getStatusCode()).body(apiError);
-    }
+	@ExceptionHandler(DuplicateMenuItemException.class)
+	public ResponseEntity<ApiError> handleDuplicateMenuItem(DuplicateMenuItemException exception,
+			HttpServletRequest request) {
+		return error(HttpStatus.CONFLICT, exception, request);
+	}
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiError> handleIllegalArgument(
-            IllegalArgumentException exception,
-            HttpServletRequest servletRequest) {
+	@ExceptionHandler(DuplicateOutletCodeException.class)
+	public ResponseEntity<ApiError> handleDuplicateOutletCode(DuplicateOutletCodeException exception,
+			HttpServletRequest request) {
+		return error(HttpStatus.CONFLICT, exception, request);
+	}
 
-        // The service uses this exception when a business argument is invalid.
-        int status = HttpStatus.BAD_REQUEST.value();
-        String message = exception.getMessage();
-        String path = servletRequest.getRequestURI();
+	@ExceptionHandler(OutletNotFoundException.class)
+	public ResponseEntity<ApiError> handleOutletNotFound(OutletNotFoundException exception,
+			HttpServletRequest request) {
+		return error(HttpStatus.NOT_FOUND, exception, request);
+	}
 
-        ApiError apiError = new ApiError(status, message, path);
-        return ResponseEntity.status(status).body(apiError);
-    }
+	@ExceptionHandler(OutletVersionConflictException.class)
+	public ResponseEntity<ApiError> handleOutletVersionConflict(OutletVersionConflictException exception,
+			HttpServletRequest request) {
+		return error(HttpStatus.CONFLICT, exception, request);
+	}
 
-    @ExceptionHandler(RestaurantChainNotFoundException.class)
-    public ResponseEntity<ApiError> handleRestaurantChainNotFound(
-            RestaurantChainNotFoundException exception,
-            HttpServletRequest servletRequest) {
+	@ExceptionHandler(MenuGroupNotFoundException.class)
+	public ResponseEntity<ApiError> handleMenuGroupNotFound(MenuGroupNotFoundException exception,
+			HttpServletRequest request) {
+		return error(HttpStatus.NOT_FOUND, exception, request);
+	}
 
-        // The requested menu group does not exist or belongs to another chain.
-        int status = HttpStatus.NOT_FOUND.value();
-        String message = exception.getMessage();
-        String path = servletRequest.getRequestURI();
+	@ExceptionHandler(MenuGroupVersionConflictException.class)
+	public ResponseEntity<ApiError> handleMenuGroupVersionConflict(MenuGroupVersionConflictException exception,
+			HttpServletRequest request) {
+		return error(HttpStatus.CONFLICT, exception, request);
+	}
 
-        ApiError apiError = new ApiError(status, message, path);
-        return ResponseEntity.status(status).body(apiError);
-    }
+	@ExceptionHandler(MenuItemNotFoundException.class)
+	public ResponseEntity<ApiError> handleMenuItemNotFound(MenuItemNotFoundException exception,
+			HttpServletRequest request) {
+		return error(HttpStatus.NOT_FOUND, exception, request);
+	}
 
-    @ExceptionHandler(DuplicateMenuGroupException.class)
-    public ResponseEntity<ApiError> handleDuplicateMenuGroup(
-            DuplicateMenuGroupException exception,
-            HttpServletRequest servletRequest) {
+	@ExceptionHandler(MenuItemVersionConflictException.class)
+	public ResponseEntity<ApiError> handleMenuItemVersionConflict(MenuItemVersionConflictException exception,
+			HttpServletRequest request) {
+		return error(HttpStatus.CONFLICT, exception, request);
+	}
 
-        // The requested menu group already exists, so the API returns 409.
-        int status = HttpStatus.CONFLICT.value();
-        String message = exception.getMessage();
-        String path = servletRequest.getRequestURI();
+	@ExceptionHandler(IllegalStateException.class)
+	public ResponseEntity<ApiError> handleIllegalState(IllegalStateException exception, HttpServletRequest request) {
+		return error(HttpStatus.CONFLICT, exception, request);
+	}
 
-        ApiError apiError = new ApiError(status, message, path);
-        return ResponseEntity.status(status).body(apiError);
-    }
-
-    @ExceptionHandler(DuplicateMenuItemException.class)
-    public ResponseEntity<ApiError> handleDuplicateMenuItem(
-            DuplicateMenuItemException exception,
-            HttpServletRequest servletRequest) {
-
-        // The requested menu item already exists, so the API returns 409.
-        int status = HttpStatus.CONFLICT.value();
-        String message = exception.getMessage();
-        String path = servletRequest.getRequestURI();
-
-        ApiError apiError = new ApiError(status, message, path);
-        return ResponseEntity.status(status).body(apiError);
-    }
-
-    @ExceptionHandler(DuplicateOutletCodeException.class)
-    public ResponseEntity<ApiError> handleDuplicateOutletCode(
-            DuplicateOutletCodeException exception,
-            HttpServletRequest servletRequest) {
-        ApiError apiError = new ApiError(HttpStatus.CONFLICT.value(), exception.getMessage(), servletRequest.getRequestURI());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
-    }
-
-    @ExceptionHandler(OutletNotFoundException.class)
-    public ResponseEntity<ApiError> handleOutletNotFound(
-            OutletNotFoundException exception,
-            HttpServletRequest servletRequest) {
-
-        // The outlet is missing or belongs to another restaurant chain.
-        int status = HttpStatus.NOT_FOUND.value();
-        String message = exception.getMessage();
-        String path = servletRequest.getRequestURI();
-
-        ApiError apiError = new ApiError(status, message, path);
-        return ResponseEntity.status(status).body(apiError);
-    }
-
-    @ExceptionHandler(OutletVersionConflictException.class)
-    public ResponseEntity<ApiError> handleOutletVersionConflict(
-            OutletVersionConflictException exception,
-            HttpServletRequest request) {
-        ApiError error = new ApiError(409, exception.getMessage(), request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
-    }
-
-    @ExceptionHandler(MenuGroupNotFoundException.class)
-    public ResponseEntity<ApiError> handleMenuGroupNotFound(
-            MenuGroupNotFoundException exception,
-            HttpServletRequest servletRequest) {
-
-        // The requested restaurant chain does not exist, so the API returns 404.
-        int status = HttpStatus.NOT_FOUND.value();
-        String message = exception.getMessage();
-        String path = servletRequest.getRequestURI();
-
-        ApiError apiError = new ApiError(status, message, path);
-        return ResponseEntity.status(status).body(apiError);
-    }
-
-    @ExceptionHandler(MenuGroupVersionConflictException.class)
-    public ResponseEntity<ApiError> handleMenuGroupVersionConflict(
-            MenuGroupVersionConflictException exception,
-            HttpServletRequest servletRequest) {
-        int status = HttpStatus.CONFLICT.value();
-        ApiError apiError = new ApiError(status, exception.getMessage(), servletRequest.getRequestURI());
-        return ResponseEntity.status(status).body(apiError);
-    }
-
-    @ExceptionHandler(MenuItemNotFoundException.class)
-    public ResponseEntity<ApiError> handleMenuItemNotFound(
-            MenuItemNotFoundException exception, HttpServletRequest request) {
-        ApiError error = new ApiError(404, exception.getMessage(), request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-    }
-
-    @ExceptionHandler(MenuItemVersionConflictException.class)
-    public ResponseEntity<ApiError> handleMenuItemVersionConflict(
-            MenuItemVersionConflictException exception, HttpServletRequest request) {
-        ApiError error = new ApiError(409, exception.getMessage(), request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
-    }
-
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<ApiError> handleIllegalState(
-            IllegalStateException exception, HttpServletRequest request) {
-        ApiError error = new ApiError(409, exception.getMessage(), request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
-    }
+	/** Builds the unchanged error body shared by every Catalog endpoint. */
+	private ResponseEntity<ApiError> error(HttpStatusCode status, Exception exception, HttpServletRequest request) {
+		ApiError body = new ApiError(status.value(), exception.getMessage(), request.getRequestURI());
+		return ResponseEntity.status(status).body(body);
+	}
 }

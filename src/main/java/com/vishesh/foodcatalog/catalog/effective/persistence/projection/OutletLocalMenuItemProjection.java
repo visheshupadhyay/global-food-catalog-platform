@@ -3,17 +3,17 @@ package com.vishesh.foodcatalog.catalog.effective.persistence.projection;
 import java.math.BigDecimal;
 
 public interface OutletLocalMenuItemProjection {
-    Long getMenuItemId();
+	Long getMenuItemId();
 
-    Long getOutletId();
+	Long getOutletId();
 
-    String getItemName();
+	String getItemName();
 
-    BigDecimal getPrice();
+	BigDecimal getPrice();
 
-    Boolean getAvailable();
+	Boolean getAvailable();
 
-    Boolean getVisible();
+	Boolean getVisible();
 
-    String getStatus();
+	String getStatus();
 }

@@ -6,21 +6,15 @@ import java.util.List;
 import com.vishesh.foodcatalog.catalog.domain.MenuItem;
 
 public interface MenuItemRepository {
-    MenuItem save(MenuItem menuItem);
+	MenuItem save(MenuItem menuItem);
 
-    Optional<MenuItem> findById(Long id);
+	Optional<MenuItem> findById(Long id);
 
-    Optional<MenuItem> findByIdAndRestaurantChainId(
-            Long id,
-            Long restaurantChainId);
+	Optional<MenuItem> findByIdAndRestaurantChainId(Long id, Long restaurantChainId);
 
-    Optional<MenuItem> findByBusinessCodeAndRestaurantChainId(
-            String businessCode,
-            Long restaurantChainId);
+	Optional<MenuItem> findByBusinessCodeAndRestaurantChainId(String businessCode, Long restaurantChainId);
 
-    boolean existsByBusinessCodeAndRestaurantChainId(
-            String businessCode,
-            Long restaurantChainId);
+	boolean existsByBusinessCodeAndRestaurantChainId(String businessCode, Long restaurantChainId);
 
-    List<Long> findAffectedOutletIds(Long menuItemId);
+	List<Long> findAffectedOutletIds(Long menuItemId);
 }

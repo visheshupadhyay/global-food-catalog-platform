@@ -20,66 +20,49 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/restaurant-chains/{restaurantChainId}/menu-groups")
 @RestController
 public class MenuGroupController {
-    private final MenuGroupService service;
+	private final MenuGroupService service;
 
-    public MenuGroupController(MenuGroupService service) {
-        this.service = service;
-    }
+	public MenuGroupController(MenuGroupService service) {
+		this.service = service;
+	}
 
-    @PostMapping
-    public ResponseEntity<MenuGroupCreatedResponse> createMenuGroup(
-            @PathVariable Long restaurantChainId,
-            @Valid @RequestBody CreateMenuGroupRequest request) {
+	@PostMapping
+	public ResponseEntity<MenuGroupCreatedResponse> createMenuGroup(@PathVariable Long restaurantChainId,
+			@Valid @RequestBody CreateMenuGroupRequest request) {
 
-        // The controller is the HTTP front door; business rules stay in the service.
-        MenuGroup menuGroup = service.createMenuGroup(restaurantChainId, request.getDisplayName());
-        MenuGroupCreatedResponse response = new MenuGroupCreatedResponse(
-                menuGroup.getId(),
-                menuGroup.getRestaurantChainId(),
-                menuGroup.getDisplayName(),
-                menuGroup.getStatus(),
-                menuGroup.getVersion());
+		// The controller is the HTTP front door; business rules stay in the service.
+		MenuGroup menuGroup = service.createMenuGroup(restaurantChainId, request.getDisplayName());
+		MenuGroupCreatedResponse response = toResponse(menuGroup);
 
-        // Tell the caller where the new menu group can be found later.
-        URI location = URI.create("/api/v1/restaurant-chains/" + restaurantChainId
-                + "/menu-groups/" + response.id());
+		// Tell the caller where the new menu group can be found later.
+		URI location = URI.create("/api/v1/restaurant-chains/" + restaurantChainId + "/menu-groups/" + response.id());
 
-        return ResponseEntity.created(location).body(response);
-    }
+		return ResponseEntity.created(location).body(response);
+	}
 
-    @GetMapping("/{id}")
-    public ResponseEntity<MenuGroupCreatedResponse> getMenuGroup(
-            @PathVariable("restaurantChainId") Long restaurantChainId,
-            @PathVariable("id") Long id) {
+	@GetMapping("/{id}")
+	public ResponseEntity<MenuGroupCreatedResponse> getMenuGroup(
+			@PathVariable("restaurantChainId") Long restaurantChainId, @PathVariable("id") Long id) {
 
-        // The controller is the HTTP front door; business rules stay in the service.
-        MenuGroup menuGroup = service.findMenuGroupById(restaurantChainId, id);
-        MenuGroupCreatedResponse response = new MenuGroupCreatedResponse(
-                menuGroup.getId(),
-                menuGroup.getRestaurantChainId(),
-                menuGroup.getDisplayName(),
-                menuGroup.getStatus(),
-                menuGroup.getVersion());
+		// The controller is the HTTP front door; business rules stay in the service.
+		MenuGroup menuGroup = service.findMenuGroupById(restaurantChainId, id);
+		return ResponseEntity.ok(toResponse(menuGroup));
+	}
 
-        return ResponseEntity.ok(response);
-    }
+	@PatchMapping("/{menuGroupId}")
+	public ResponseEntity<MenuGroupCreatedResponse> updateMenuGroup(@PathVariable("menuGroupId") Long menuGroupId,
+			@PathVariable("restaurantChainId") Long restaurantChainId,
+			@Valid @RequestBody MenuGroupUpdateRequest request) {
 
-    @PatchMapping("/{menuGroupId}")
-    public ResponseEntity<MenuGroupCreatedResponse> updateMenuGroup(
-        @PathVariable("menuGroupId") Long menuGroupId,
-        @PathVariable("restaurantChainId") Long restaurantChainId,
-        @Valid @RequestBody MenuGroupUpdateRequest request) {
+		// The controller is the HTTP front door; business rules stay in the service.
+		MenuGroup menuGroup = service.updateMenuGroup(restaurantChainId, menuGroupId, request);
+		return ResponseEntity.ok(toResponse(menuGroup));
+	}
 
-        // The controller is the HTTP front door; business rules stay in the service.
-        MenuGroup menuGroup = service.updateMenuGroup(restaurantChainId, menuGroupId, request);
-        MenuGroupCreatedResponse response = new MenuGroupCreatedResponse(
-                menuGroup.getId(),
-                menuGroup.getRestaurantChainId(),
-                menuGroup.getDisplayName(),
-                menuGroup.getStatus(),
-                menuGroup.getVersion());
-
-        return ResponseEntity.ok(response);
-    }
+	/** Maps the domain model to the stable JSON shape exposed by this API. */
+	private MenuGroupCreatedResponse toResponse(MenuGroup menuGroup) {
+		return new MenuGroupCreatedResponse(menuGroup.getId(), menuGroup.getRestaurantChainId(),
+				menuGroup.getDisplayName(), menuGroup.getStatus(), menuGroup.getVersion());
+	}
 
 }

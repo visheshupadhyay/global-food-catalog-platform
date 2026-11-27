@@ -11,211 +11,197 @@ import java.util.Currency;
 import org.junit.jupiter.api.Test;
 
 public class OutletTest {
-    @Test
-    void createsDraftOutletWithRequiredFields() {
-        String displayName = "BURGER-KING";
-        Long restaurantChainId = 10L;
-        Currency currency = Currency.getInstance("EUR");
-        String outletCode = "BERLIN-MITTE";
+	@Test
+	void createsDraftOutletWithRequiredFields() {
+		String displayName = "BURGER-KING";
+		Long restaurantChainId = 10L;
+		Currency currency = Currency.getInstance("EUR");
+		String outletCode = "BERLIN-MITTE";
 
-        Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
-        assertNotNull(outlet);
-        assertEquals(restaurantChainId, outlet.getRestaurantChainId());
-        assertEquals(displayName, outlet.getDisplayName());
-        assertEquals(ChainStatus.DRAFT, outlet.getStatus());
-        assertNotNull(outlet.getCreatedAt());
-        assertNotNull(outlet.getUpdatedAt());
-        assertEquals(outlet.getCreatedAt(), outlet.getUpdatedAt());
-        assertEquals(outletCode, outlet.getOutletCode());
-        assertEquals(currency, outlet.getCurrency());
-        assertEquals("UTC", outlet.getTimezone());
-    }
+		Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
+		assertNotNull(outlet);
+		assertEquals(restaurantChainId, outlet.getRestaurantChainId());
+		assertEquals(displayName, outlet.getDisplayName());
+		assertEquals(ChainStatus.DRAFT, outlet.getStatus());
+		assertNotNull(outlet.getCreatedAt());
+		assertNotNull(outlet.getUpdatedAt());
+		assertEquals(outlet.getCreatedAt(), outlet.getUpdatedAt());
+		assertEquals(outletCode, outlet.getOutletCode());
+		assertEquals(currency, outlet.getCurrency());
+		assertEquals("UTC", outlet.getTimezone());
+	}
 
-    @Test
-    void acceptsAndTrimsIanaTimezone() {
-        Outlet outlet = new Outlet(10L, "BURGER-KING", "BERLIN-MITTE",
-                Currency.getInstance("EUR"), " Europe/Berlin ");
+	@Test
+	void acceptsAndTrimsIanaTimezone() {
+		Outlet outlet = new Outlet(10L, "BURGER-KING", "BERLIN-MITTE", Currency.getInstance("EUR"), " Europe/Berlin ");
 
-        assertEquals("Europe/Berlin", outlet.getTimezone());
-    }
+		assertEquals("Europe/Berlin", outlet.getTimezone());
+	}
 
-    @Test
-    void rejectsMissingOrInvalidTimezone() {
-        assertThrows(IllegalArgumentException.class,
-                () -> new Outlet(10L, "BURGER-KING", "BERLIN-MITTE",
-                        Currency.getInstance("EUR"), "  "));
-        assertThrows(IllegalArgumentException.class,
-                () -> new Outlet(10L, "BURGER-KING", "BERLIN-MITTE",
-                        Currency.getInstance("EUR"), "Not/AZone"));
-    }
+	@Test
+	void rejectsMissingOrInvalidTimezone() {
+		assertThrows(IllegalArgumentException.class,
+				() -> new Outlet(10L, "BURGER-KING", "BERLIN-MITTE", Currency.getInstance("EUR"), "  "));
+		assertThrows(IllegalArgumentException.class,
+				() -> new Outlet(10L, "BURGER-KING", "BERLIN-MITTE", Currency.getInstance("EUR"), "Not/AZone"));
+	}
 
-    @Test
-    void rejectsBlankInputs() {
-        String displayName = "BURGER-KING";
-        Long restaurantChainId = 10L;
-        Currency currency = Currency.getInstance("EUR");
-        String outletCode = "BERLIN-MITTE";
+	@Test
+	void rejectsBlankInputs() {
+		String displayName = "BURGER-KING";
+		Long restaurantChainId = 10L;
+		Currency currency = Currency.getInstance("EUR");
+		String outletCode = "BERLIN-MITTE";
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new Outlet(restaurantChainId, "  ", outletCode, currency));
-        assertThrows(IllegalArgumentException.class,
-                () -> new Outlet(restaurantChainId, displayName, "  ", currency));
-    }
+		assertThrows(IllegalArgumentException.class, () -> new Outlet(restaurantChainId, "  ", outletCode, currency));
+		assertThrows(IllegalArgumentException.class, () -> new Outlet(restaurantChainId, displayName, "  ", currency));
+	}
 
-    @Test
-    void rejectsNullInputs() {
-        String displayName = "BURGER-KING";
-        Long restaurantChainId = 10L;
-        Currency currency = Currency.getInstance("EUR");
-        String outletCode = "BERLIN-MITTE";
+	@Test
+	void rejectsNullInputs() {
+		String displayName = "BURGER-KING";
+		Long restaurantChainId = 10L;
+		Currency currency = Currency.getInstance("EUR");
+		String outletCode = "BERLIN-MITTE";
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new Outlet(null, displayName, outletCode, currency));
-        assertThrows(IllegalArgumentException.class,
-                () -> new Outlet(restaurantChainId, null, outletCode, currency));
-        assertThrows(IllegalArgumentException.class,
-                () -> new Outlet(restaurantChainId, displayName, null, currency));
-        assertThrows(IllegalArgumentException.class,
-                () -> new Outlet(restaurantChainId, displayName, outletCode, null));
-    }
+		assertThrows(IllegalArgumentException.class, () -> new Outlet(null, displayName, outletCode, currency));
+		assertThrows(IllegalArgumentException.class, () -> new Outlet(restaurantChainId, null, outletCode, currency));
+		assertThrows(IllegalArgumentException.class, () -> new Outlet(restaurantChainId, displayName, null, currency));
+		assertThrows(IllegalArgumentException.class,
+				() -> new Outlet(restaurantChainId, displayName, outletCode, null));
+	}
 
-    @Test
-    void rejectsZeroOrNegativeChainIdInputs() {
-        String displayName = "BURGER-KING";
-        Currency currency = Currency.getInstance("EUR");
-        String outletCode = "BERLIN-MITTE";
+	@Test
+	void rejectsZeroOrNegativeChainIdInputs() {
+		String displayName = "BURGER-KING";
+		Currency currency = Currency.getInstance("EUR");
+		String outletCode = "BERLIN-MITTE";
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new Outlet(-1L, displayName, outletCode, currency));
+		assertThrows(IllegalArgumentException.class, () -> new Outlet(-1L, displayName, outletCode, currency));
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new Outlet(0L, displayName, outletCode, currency));
-    }
+		assertThrows(IllegalArgumentException.class, () -> new Outlet(0L, displayName, outletCode, currency));
+	}
 
-    @Test
-    void trimsValues() {
-        String displayName = "  BURGER-KING ";
-        Long restaurantChainId = 10L;
-        Currency currency = Currency.getInstance("EUR");
-        String outletCode = "  BERLIN-MITTE ";
-        Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
-        assertEquals("BERLIN-MITTE", outlet.getOutletCode());
-        assertEquals("BURGER-KING", outlet.getDisplayName());
-    }
+	@Test
+	void trimsValues() {
+		String displayName = "  BURGER-KING ";
+		Long restaurantChainId = 10L;
+		Currency currency = Currency.getInstance("EUR");
+		String outletCode = "  BERLIN-MITTE ";
+		Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
+		assertEquals("BERLIN-MITTE", outlet.getOutletCode());
+		assertEquals("BURGER-KING", outlet.getDisplayName());
+	}
 
-    @Test
-    void updatesTimestampWhenStatusChanges() {
-        String displayName = "BURGER-KING";
-        Long restaurantChainId = 10L;
-        Currency currency = Currency.getInstance("EUR");
-        String outletCode = "BERLIN-MITTE";
+	@Test
+	void updatesTimestampWhenStatusChanges() {
+		String displayName = "BURGER-KING";
+		Long restaurantChainId = 10L;
+		Currency currency = Currency.getInstance("EUR");
+		String outletCode = "BERLIN-MITTE";
 
-        Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
+		Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
 
-        Instant originalUpdatedAt = outlet.getUpdatedAt();
-        outlet.changeStatusTo(ChainStatus.ACTIVE);
-        assertEquals(ChainStatus.ACTIVE, outlet.getStatus());
-        assertFalse(outlet.getUpdatedAt().isBefore(originalUpdatedAt));
-    }
+		Instant originalUpdatedAt = outlet.getUpdatedAt();
+		outlet.changeStatusTo(ChainStatus.ACTIVE);
+		assertEquals(ChainStatus.ACTIVE, outlet.getStatus());
+		assertFalse(outlet.getUpdatedAt().isBefore(originalUpdatedAt));
+	}
 
-    @Test
-    void rejectsNullStatus() {
-        String displayName = "BURGER-KING";
-        Long restaurantChainId = 10L;
-        Currency currency = Currency.getInstance("EUR");
-        String outletCode = "BERLIN-MITTE";
+	@Test
+	void rejectsNullStatus() {
+		String displayName = "BURGER-KING";
+		Long restaurantChainId = 10L;
+		Currency currency = Currency.getInstance("EUR");
+		String outletCode = "BERLIN-MITTE";
 
-        Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
+		Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> outlet.changeStatusTo(null));
-    }
+		assertThrows(IllegalArgumentException.class, () -> outlet.changeStatusTo(null));
+	}
 
-    @Test
-    void allowsOnlyForwardLifecycleTransitions() {
-        String displayName = "BURGER-KING";
-        Long restaurantChainId = 10L;
-        Currency currency = Currency.getInstance("EUR");
-        String outletCode = "BERLIN-MITTE";
+	@Test
+	void allowsOnlyForwardLifecycleTransitions() {
+		String displayName = "BURGER-KING";
+		Long restaurantChainId = 10L;
+		Currency currency = Currency.getInstance("EUR");
+		String outletCode = "BERLIN-MITTE";
 
-        Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
+		Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
 
-        outlet.changeStatusTo(ChainStatus.ACTIVE);
-        outlet.changeStatusTo(ChainStatus.ARCHIVED);
+		outlet.changeStatusTo(ChainStatus.ACTIVE);
+		outlet.changeStatusTo(ChainStatus.ARCHIVED);
 
-        assertEquals(ChainStatus.ARCHIVED, outlet.getStatus());
-    }
+		assertEquals(ChainStatus.ARCHIVED, outlet.getStatus());
+	}
 
-    @Test
-    void rejectsSkippingLifecycleStates() {
-        String displayName = "BURGER-KING";
-        Long restaurantChainId = 10L;
-        Currency currency = Currency.getInstance("EUR");
-        String outletCode = "BERLIN-MITTE";
+	@Test
+	void rejectsSkippingLifecycleStates() {
+		String displayName = "BURGER-KING";
+		Long restaurantChainId = 10L;
+		Currency currency = Currency.getInstance("EUR");
+		String outletCode = "BERLIN-MITTE";
 
-        Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
-        assertThrows(IllegalStateException.class,
-                () -> outlet.changeStatusTo(ChainStatus.ARCHIVED));
-    }
+		Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
+		assertThrows(IllegalStateException.class, () -> outlet.changeStatusTo(ChainStatus.ARCHIVED));
+	}
 
-    @Test
-    void requiresExplicitRestoreForArchivedOutlet() {
-        String displayName = "BURGER-KING";
-        Long restaurantChainId = 10L;
-        Currency currency = Currency.getInstance("EUR");
-        String outletCode = "BERLIN-MITTE";
+	@Test
+	void requiresExplicitRestoreForArchivedOutlet() {
+		String displayName = "BURGER-KING";
+		Long restaurantChainId = 10L;
+		Currency currency = Currency.getInstance("EUR");
+		String outletCode = "BERLIN-MITTE";
 
-        Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
+		Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
 
-        outlet.changeStatusTo(ChainStatus.ACTIVE);
-        outlet.changeStatusTo(ChainStatus.ARCHIVED);
+		outlet.changeStatusTo(ChainStatus.ACTIVE);
+		outlet.changeStatusTo(ChainStatus.ARCHIVED);
 
-        assertThrows(IllegalStateException.class,
-                () -> outlet.changeStatusTo(ChainStatus.ACTIVE));
+		assertThrows(IllegalStateException.class, () -> outlet.changeStatusTo(ChainStatus.ACTIVE));
 
-        outlet.restoreFromArchive();
+		outlet.restoreFromArchive();
 
-        assertEquals(ChainStatus.ACTIVE, outlet.getStatus());
-    }
+		assertEquals(ChainStatus.ACTIVE, outlet.getStatus());
+	}
 
-    @Test
-    void restoringNonArchivedOutletIsRejected() {
-        String displayName = "BURGER-KING";
-        Long restaurantChainId = 10L;
-        Currency currency = Currency.getInstance("EUR");
-        String outletCode = "BERLIN-MITTE";
+	@Test
+	void restoringNonArchivedOutletIsRejected() {
+		String displayName = "BURGER-KING";
+		Long restaurantChainId = 10L;
+		Currency currency = Currency.getInstance("EUR");
+		String outletCode = "BERLIN-MITTE";
 
-        Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
+		Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
 
-        assertThrows(IllegalStateException.class, outlet::restoreFromArchive);
-    }
+		assertThrows(IllegalStateException.class, outlet::restoreFromArchive);
+	}
 
-    @Test
-    void changingToCurrentStatusDoesNotUpdateTimestamp() {
-        String displayName = "BURGER-KING";
-        Long restaurantChainId = 10L;
-        Currency currency = Currency.getInstance("EUR");
-        String outletCode = "BERLIN-MITTE";
+	@Test
+	void changingToCurrentStatusDoesNotUpdateTimestamp() {
+		String displayName = "BURGER-KING";
+		Long restaurantChainId = 10L;
+		Currency currency = Currency.getInstance("EUR");
+		String outletCode = "BERLIN-MITTE";
 
-        Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
-        Instant lastUpdated = outlet.getUpdatedAt();
-        outlet.changeStatusTo(ChainStatus.DRAFT);
-        Instant currentUpdated = outlet.getUpdatedAt();
+		Outlet outlet = new Outlet(restaurantChainId, displayName, outletCode, currency);
+		Instant lastUpdated = outlet.getUpdatedAt();
+		outlet.changeStatusTo(ChainStatus.DRAFT);
+		Instant currentUpdated = outlet.getUpdatedAt();
 
-        assertEquals(lastUpdated, currentUpdated);
+		assertEquals(lastUpdated, currentUpdated);
 
-    }
+	}
 
-    @Test
-    void rehydratesStoredOutletWithIdAndVersion() {
-        Instant storedAt = Instant.parse("2026-11-23T10:00:00Z");
+	@Test
+	void rehydratesStoredOutletWithIdAndVersion() {
+		Instant storedAt = Instant.parse("2026-11-23T10:00:00Z");
 
-        Outlet outlet = new Outlet(45L, 10L, "Berlin Mitte", "BERLIN-MITTE",
-                Currency.getInstance("EUR"), ChainStatus.DRAFT, storedAt, storedAt,
-                "Europe/Berlin", 3L);
+		Outlet outlet = new Outlet(45L, 10L, "Berlin Mitte", "BERLIN-MITTE", Currency.getInstance("EUR"),
+				ChainStatus.DRAFT, storedAt, storedAt, "Europe/Berlin", 3L);
 
-        assertEquals(45L, outlet.getId());
-        assertEquals(3L, outlet.getVersion());
-        assertEquals("Europe/Berlin", outlet.getTimezone());
-    }
+		assertEquals(45L, outlet.getId());
+		assertEquals(3L, outlet.getVersion());
+		assertEquals("Europe/Berlin", outlet.getTimezone());
+	}
 }

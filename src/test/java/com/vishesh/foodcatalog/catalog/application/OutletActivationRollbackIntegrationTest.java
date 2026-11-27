@@ -27,64 +27,61 @@ import com.vishesh.foodcatalog.catalog.event.domain.OutboxEvent;
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 class OutletActivationRollbackIntegrationTest {
-    @Autowired
-    private OutletService service;
+	@Autowired
+	private OutletService service;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
-    @MockitoBean
-    private OutboxEventRepository outboxEvents;
+	@MockitoBean
+	private OutboxEventRepository outboxEvents;
 
-    private Long chainId;
-    private Long menuGroupId;
-    private Long outletId;
+	private Long chainId;
+	private Long menuGroupId;
+	private Long outletId;
 
-    @AfterEach
-    void cleanUp() {
-        if (outletId != null) {
-            jdbcTemplate.update("delete from outbox_event where aggregate_id = ?", outletId);
-            jdbcTemplate.update("delete from menu_group_outlet where outlet_id = ?", outletId);
-            jdbcTemplate.update("delete from outlet where id = ?", outletId);
-        }
-        if (menuGroupId != null) {
-            jdbcTemplate.update("delete from menu_group where id = ?", menuGroupId);
-        }
-        if (chainId != null) {
-            jdbcTemplate.update("delete from restaurant_chain where id = ?", chainId);
-        }
-    }
+	@AfterEach
+	void cleanUp() {
+		if (outletId != null) {
+			jdbcTemplate.update("delete from outbox_event where aggregate_id = ?", outletId);
+			jdbcTemplate.update("delete from menu_group_outlet where outlet_id = ?", outletId);
+			jdbcTemplate.update("delete from outlet where id = ?", outletId);
+		}
+		if (menuGroupId != null) {
+			jdbcTemplate.update("delete from menu_group where id = ?", menuGroupId);
+		}
+		if (chainId != null) {
+			jdbcTemplate.update("delete from restaurant_chain where id = ?", chainId);
+		}
+	}
 
-    @Test
-    void activate_whenOutboxSaveFails_rollsBackTheOutletStatusAndVersion() {
-        createDraftOutletWithActiveMenuGroup();
-        doThrow(new RuntimeException("forced outbox failure"))
-                .when(outboxEvents).save(any(OutboxEvent.class));
+	@Test
+	void activate_whenOutboxSaveFails_rollsBackTheOutletStatusAndVersion() {
+		createDraftOutletWithActiveMenuGroup();
+		doThrow(new RuntimeException("forced outbox failure")).when(outboxEvents).save(any(OutboxEvent.class));
 
-        assertThrows(RuntimeException.class, () -> service.activateOutlet(outletId, 0L));
+		assertThrows(RuntimeException.class, () -> service.activateOutlet(outletId, 0L));
 
-        assertEquals(ChainStatus.DRAFT.name(), jdbcTemplate.queryForObject(
-                "select status from outlet where id = ?", String.class, outletId));
-        assertEquals(0L, jdbcTemplate.queryForObject(
-                "select version from outlet where id = ?", Long.class, outletId));
-        assertEquals(0, jdbcTemplate.queryForObject(
-                "select count(*) from outbox_event where aggregate_id = ?", Integer.class, outletId));
-    }
+		assertEquals(ChainStatus.DRAFT.name(),
+				jdbcTemplate.queryForObject("select status from outlet where id = ?", String.class, outletId));
+		assertEquals(0L, jdbcTemplate.queryForObject("select version from outlet where id = ?", Long.class, outletId));
+		assertEquals(0, jdbcTemplate.queryForObject("select count(*) from outbox_event where aggregate_id = ?",
+				Integer.class, outletId));
+	}
 
-    private void createDraftOutletWithActiveMenuGroup() {
-        chainId = jdbcTemplate.queryForObject(
-                "insert into restaurant_chain (display_name, business_code, status) values (?, ?, ?) returning id",
-                Long.class, "Outlet Rollback Chain", "OUTLET-ROLLBACK-" + UUID.randomUUID(),
-                ChainStatus.ACTIVE.name());
-        menuGroupId = jdbcTemplate.queryForObject(
-                "insert into menu_group (display_name, restaurant_chain_id, status) values (?, ?, ?) returning id",
-                Long.class, "Main Menu", chainId, ChainStatus.ACTIVE.name());
-        outletId = jdbcTemplate.queryForObject(
-                "insert into outlet (display_name, currency, outlet_code, restaurant_chain_id, status, timezone) "
-                        + "values (?, ?, ?, ?, ?, ?) returning id",
-                Long.class, "Indiranagar", "INR", "OUTLET-ROLLBACK-" + UUID.randomUUID(), chainId,
-                ChainStatus.DRAFT.name(), "Asia/Kolkata");
-        jdbcTemplate.update("insert into menu_group_outlet (menu_group_id, outlet_id) values (?, ?)",
-                menuGroupId, outletId);
-    }
+	private void createDraftOutletWithActiveMenuGroup() {
+		chainId = jdbcTemplate.queryForObject(
+				"insert into restaurant_chain (display_name, business_code, status) values (?, ?, ?) returning id",
+				Long.class, "Outlet Rollback Chain", "OUTLET-ROLLBACK-" + UUID.randomUUID(), ChainStatus.ACTIVE.name());
+		menuGroupId = jdbcTemplate.queryForObject(
+				"insert into menu_group (display_name, restaurant_chain_id, status) values (?, ?, ?) returning id",
+				Long.class, "Main Menu", chainId, ChainStatus.ACTIVE.name());
+		outletId = jdbcTemplate.queryForObject(
+				"insert into outlet (display_name, currency, outlet_code, restaurant_chain_id, status, timezone) "
+						+ "values (?, ?, ?, ?, ?, ?) returning id",
+				Long.class, "Indiranagar", "INR", "OUTLET-ROLLBACK-" + UUID.randomUUID(), chainId,
+				ChainStatus.DRAFT.name(), "Asia/Kolkata");
+		jdbcTemplate.update("insert into menu_group_outlet (menu_group_id, outlet_id) values (?, ?)", menuGroupId,
+				outletId);
+	}
 }

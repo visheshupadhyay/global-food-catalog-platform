@@ -10,50 +10,50 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
 public class CreateSharedMenuItemRequest {
-    @NotBlank
-    private String businessCode;
+	@NotBlank
+	private String businessCode;
 
-    @NotBlank
-    private String itemName;
+	@NotBlank
+	private String itemName;
 
-    @NotNull 
-    @PositiveOrZero
-    private BigDecimal itemPrice;
+	@NotNull
+	@PositiveOrZero
+	private BigDecimal itemPrice;
 
-    @NotNull
-    @Positive
-    private Long menuGroupId;
+	@NotNull
+	@Positive
+	private Long menuGroupId;
 
-    @NotNull
-    @Positive
-    private Long menuCategoryId;
+	@NotNull
+	@Positive
+	private Long menuCategoryId;
 
-    // Optional so existing clients keep creating normal products. BUNDLE is
-    // supplied explicitly only for meal/combo roots.
-    private MenuItemKind menuItemKind;
+	// Optional so existing clients keep creating normal products. BUNDLE is
+	// supplied explicitly only for meal/combo roots.
+	private MenuItemKind menuItemKind;
 
-    public String getBusinessCode() {
-        return businessCode;
-    }
+	public String getBusinessCode() {
+		return businessCode;
+	}
 
-    public String getItemName() {
-        return itemName;
-    }
+	public String getItemName() {
+		return itemName;
+	}
 
-    public BigDecimal getItemPrice() {
-        return itemPrice;
-    }
+	public BigDecimal getItemPrice() {
+		return itemPrice;
+	}
 
-    public Long getMenuGroupId() {
-        return menuGroupId;
-    }
+	public Long getMenuGroupId() {
+		return menuGroupId;
+	}
 
-    public Long getMenuCategoryId() {
-        return menuCategoryId;
-    }
+	public Long getMenuCategoryId() {
+		return menuCategoryId;
+	}
 
-    public MenuItemKind getMenuItemKind() {
-        return menuItemKind;
-    }
+	public MenuItemKind getMenuItemKind() {
+		return menuItemKind;
+	}
 
 }

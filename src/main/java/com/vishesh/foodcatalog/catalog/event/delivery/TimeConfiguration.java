@@ -10,13 +10,13 @@ import org.springframework.web.client.RestClient;
 @Configuration
 public class TimeConfiguration {
 
-    @Bean
-    Clock utcClock() {
-        return Clock.systemUTC();
-    }
+	@Bean
+	Clock utcClock() {
+		return Clock.systemUTC();
+	}
 
-    @Bean
-    RestClient.Builder restClientBuilder() {
-        return RestClient.builder();
-    }
+	@Bean
+	RestClient.Builder restClientBuilder() {
+		return RestClient.builder();
+	}
 }

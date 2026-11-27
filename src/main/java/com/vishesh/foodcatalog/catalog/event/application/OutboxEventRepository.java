@@ -11,19 +11,20 @@ import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventStatus;
 /** The application’s small storage contract for outbox events. */
 /** Application port for durable outbox reads and delivery-state changes. */
 public interface OutboxEventRepository {
-    OutboxEvent save(OutboxEvent event);
+	OutboxEvent save(OutboxEvent event);
 
-    Optional<OutboxEvent> findByEventId(UUID eventId);
+	Optional<OutboxEvent> findByEventId(UUID eventId);
 
-    List<OutboxEvent> findPendingEvents(Instant now, int limit);
+	List<OutboxEvent> findPendingEvents(Instant now, int limit);
 
-    void markPublished(Long id, Instant publishedAt);
+	void markPublished(Long id, Instant publishedAt);
 
-    void markFailed(Long id, String error, Instant nextAttemptAt, Instant failedAt);
+	void markFailed(Long id, String error, Instant nextAttemptAt, Instant failedAt);
 
-    Optional<OutboxEvent> claimNextPendingEvent(Instant now);
+	Optional<OutboxEvent> claimNextPendingEvent(Instant now);
 
-    int recoverStaleProcessingEvents(Instant cutoffTime);
+	int recoverStaleProcessingEvents(Instant cutoffTime);
 
-    OutboxEvent recordFailure(Long id, OutboxEventStatus status, Long retryCount, String failureDetails, Instant nextAttemptAt, Instant failedTimestamp);
+	OutboxEvent recordFailure(Long id, OutboxEventStatus status, Long retryCount, String failureDetails,
+			Instant nextAttemptAt, Instant failedTimestamp);
 }

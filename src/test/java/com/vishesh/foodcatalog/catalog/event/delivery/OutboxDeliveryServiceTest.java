@@ -28,147 +28,122 @@ import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventType;
 @ExtendWith(MockitoExtension.class)
 class OutboxDeliveryServiceTest {
 
-    private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
+	private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
-    @Mock
-    private OutboxEventRepository repository;
+	@Mock
+	private OutboxEventRepository repository;
 
-    @Mock
-    private OutboxEventPublisher publisher;
+	@Mock
+	private OutboxEventPublisher publisher;
 
-    private OutboxDeliveryService service;
+	private OutboxDeliveryService service;
 
-    @BeforeEach
-    void setUp() {
-        service = new OutboxDeliveryService(
-                repository,
-                publisher,
-                Clock.fixed(NOW, ZoneOffset.UTC),
-                5L);
-    }
+	@BeforeEach
+	void setUp() {
+		service = new OutboxDeliveryService(repository, publisher, Clock.fixed(NOW, ZoneOffset.UTC), 5L);
+	}
 
-    @Test
-    void deliver_whenPublishSucceeds_marksEventPublished() {
-        OutboxEvent event = event(0L);
+	@Test
+	void deliver_whenPublishSucceeds_marksEventPublished() {
+		OutboxEvent event = event(0L);
 
-        service.deliver(event);
+		service.deliver(event);
 
-        verify(publisher).publish(event);
-        verify(repository).markPublished(event.getId(), NOW);
-        verify(repository, never()).recordFailure(
-                eq(event.getId()), eq(OutboxEventStatus.PENDING), eq(1L),
-                org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
-    }
+		verify(publisher).publish(event);
+		verify(repository).markPublished(event.getId(), NOW);
+		verify(repository, never()).recordFailure(eq(event.getId()), eq(OutboxEventStatus.PENDING), eq(1L),
+				org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.any());
+	}
 
-    @Test
-    void deliver_whenPublishFailsBeforeLimit_recordsPendingRetry() {
-        OutboxEvent event = event(0L);
-        doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(event);
+	@Test
+	void deliver_whenPublishFailsBeforeLimit_recordsPendingRetry() {
+		OutboxEvent event = event(0L);
+		doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(event);
 
-        service.deliver(event);
+		service.deliver(event);
 
-        verify(repository).recordFailure(
-                event.getId(), OutboxEventStatus.PENDING, 1L,
-                "Kafka unavailable", NOW.plusSeconds(60), NOW);
-        verify(repository, never()).markPublished(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
-    }
+		verify(repository).recordFailure(event.getId(), OutboxEventStatus.PENDING, 1L, "Kafka unavailable",
+				NOW.plusSeconds(60), NOW);
+		verify(repository, never()).markPublished(org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.any());
+	}
 
-    @Test
-    void deliver_afterTemporaryFailure_thenRecovery_marksEventPublished() {
-        OutboxEvent firstAttempt = event(0L);
-        doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(firstAttempt);
+	@Test
+	void deliver_afterTemporaryFailure_thenRecovery_marksEventPublished() {
+		OutboxEvent firstAttempt = event(0L);
+		doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(firstAttempt);
 
-        service.deliver(firstAttempt);
+		service.deliver(firstAttempt);
 
-        verify(repository).recordFailure(
-                firstAttempt.getId(), OutboxEventStatus.PENDING, 1L,
-                "Kafka unavailable", NOW.plusSeconds(60), NOW);
+		verify(repository).recordFailure(firstAttempt.getId(), OutboxEventStatus.PENDING, 1L, "Kafka unavailable",
+				NOW.plusSeconds(60), NOW);
 
-        OutboxEvent retryAttempt = event(firstAttempt.getEventId(), 1L);
-        service.deliver(retryAttempt);
+		OutboxEvent retryAttempt = event(firstAttempt.getEventId(), 1L);
+		service.deliver(retryAttempt);
 
-        verify(publisher).publish(retryAttempt);
-        verify(repository).markPublished(retryAttempt.getId(), NOW);
-    }
+		verify(publisher).publish(retryAttempt);
+		verify(repository).markPublished(retryAttempt.getId(), NOW);
+	}
 
-    @Test
-    void deliver_whenPublishFailsAgain_usesLongerBackoff() {
-        OutboxEvent event = event(1L);
-        doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(event);
+	@Test
+	void deliver_whenPublishFailsAgain_usesLongerBackoff() {
+		OutboxEvent event = event(1L);
+		doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(event);
 
-        service.deliver(event);
+		service.deliver(event);
 
-        verify(repository).recordFailure(
-                event.getId(), OutboxEventStatus.PENDING, 2L,
-                "Kafka unavailable", NOW.plusSeconds(120), NOW);
-    }
+		verify(repository).recordFailure(event.getId(), OutboxEventStatus.PENDING, 2L, "Kafka unavailable",
+				NOW.plusSeconds(120), NOW);
+	}
 
-    @Test
-    void deliver_whenLastRetryFails_movesEventToDlq() {
-        OutboxEvent event = event(4L);
-        doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(event);
+	@Test
+	void deliver_whenLastRetryFails_movesEventToDlq() {
+		OutboxEvent event = event(4L);
+		doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(event);
 
-        service.deliver(event);
+		service.deliver(event);
 
-        verify(repository).recordFailure(
-                event.getId(), OutboxEventStatus.DLQ, 5L,
-                "Kafka unavailable", null, NOW);
-    }
+		verify(repository).recordFailure(event.getId(), OutboxEventStatus.DLQ, 5L, "Kafka unavailable", null, NOW);
+	}
 
-    @Test
-    void deliver_whenRetryLimitIsExhausted_doesNotMarkEventPublished() {
-        OutboxEvent event = event(4L);
-        doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(event);
+	@Test
+	void deliver_whenRetryLimitIsExhausted_doesNotMarkEventPublished() {
+		OutboxEvent event = event(4L);
+		doThrow(new RuntimeException("Kafka unavailable")).when(publisher).publish(event);
 
-        service.deliver(event);
+		service.deliver(event);
 
-        verify(repository).recordFailure(
-                event.getId(), OutboxEventStatus.DLQ, 5L,
-                "Kafka unavailable", null, NOW);
-        verify(repository, never()).markPublished(
-                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any());
-    }
+		verify(repository).recordFailure(event.getId(), OutboxEventStatus.DLQ, 5L, "Kafka unavailable", null, NOW);
+		verify(repository, never()).markPublished(org.mockito.ArgumentMatchers.anyLong(),
+				org.mockito.ArgumentMatchers.any());
+	}
 
-    @Test
-    void deliver_whenPublisherExceptionHasNoMessage_usesExceptionTypeAsDetails() {
-        OutboxEvent event = event(0L);
-        doThrow(new IllegalStateException()).when(publisher).publish(event);
+	@Test
+	void deliver_whenPublisherExceptionHasNoMessage_usesExceptionTypeAsDetails() {
+		OutboxEvent event = event(0L);
+		doThrow(new IllegalStateException()).when(publisher).publish(event);
 
-        service.deliver(event);
+		service.deliver(event);
 
-        verify(repository).recordFailure(
-                eq(event.getId()), eq(OutboxEventStatus.PENDING), eq(1L),
-                eq("IllegalStateException"), eq(NOW.plusSeconds(60)), eq(NOW));
-    }
+		verify(repository).recordFailure(eq(event.getId()), eq(OutboxEventStatus.PENDING), eq(1L),
+				eq("IllegalStateException"), eq(NOW.plusSeconds(60)), eq(NOW));
+	}
 
-    @Test
-    void deliver_whenEventIsNull_rejectsInput() {
-        assertThrows(IllegalArgumentException.class, () -> service.deliver(null));
+	@Test
+	void deliver_whenEventIsNull_rejectsInput() {
+		assertThrows(IllegalArgumentException.class, () -> service.deliver(null));
 
-        verifyNoInteractions(repository, publisher);
-    }
+		verifyNoInteractions(repository, publisher);
+	}
 
-    private OutboxEvent event(long retryCount) {
-        return event(UUID.randomUUID(), retryCount);
-    }
+	private OutboxEvent event(long retryCount) {
+		return event(UUID.randomUUID(), retryCount);
+	}
 
-    private OutboxEvent event(UUID eventId, long retryCount) {
-        return new OutboxEvent(
-                101L,
-                eventId,
-                null,
-                OutboxEventType.MENU_ITEM_CHANGED,
-                "menu-item-701",
-                "{\"itemId\":701}",
-                OutboxEventStatus.PENDING,
-                retryCount,
-                NOW.plusSeconds(60),
-                null,
-                NOW,
-                null,
-                null,
-                701L,
-                1L);
-    }
+	private OutboxEvent event(UUID eventId, long retryCount) {
+		return new OutboxEvent(101L, eventId, null, OutboxEventType.MENU_ITEM_CHANGED, "menu-item-701",
+				"{\"itemId\":701}", OutboxEventStatus.PENDING, retryCount, NOW.plusSeconds(60), null, NOW, null, null,
+				701L, 1L);
+	}
 }

@@ -6,144 +6,144 @@ import java.util.UUID;
 /** Immutable delivery record kept until Kafka accepts the event. */
 /** Immutable business event waiting to be delivered, retried, or replayed. */
 public final class OutboxEvent {
-    private final Long id;
-    private final UUID eventId;
-    private final UUID originalEventId;
-    private final OutboxEventType eventType;
-    private final String kafkaKey;
-    private final String payload;
-    private final Long aggregateId;
-    private final Long aggregateVersion;
-    private final OutboxEventStatus status;
-    private final Long retryCount;
-    private final Instant nextRetryTime;
-    private final String lastErrorMessage;
-    private final Instant createdTimestamp;
-    private final Instant publishedTimestamp;
-    private final Instant failedTimestamp;
-    private final Instant processingStartedAt;
+	private final Long id;
+	private final UUID eventId;
+	private final UUID originalEventId;
+	private final OutboxEventType eventType;
+	private final String kafkaKey;
+	private final String payload;
+	private final Long aggregateId;
+	private final Long aggregateVersion;
+	private final OutboxEventStatus status;
+	private final Long retryCount;
+	private final Instant nextRetryTime;
+	private final String lastErrorMessage;
+	private final Instant createdTimestamp;
+	private final Instant publishedTimestamp;
+	private final Instant failedTimestamp;
+	private final Instant processingStartedAt;
 
-    public OutboxEvent(Long id, UUID eventId, UUID originalEventId, OutboxEventType eventType, String kafkaKey,
-            String payload, OutboxEventStatus status, Long retryCount, Instant nextRetryTime,
-            String lastErrorMessage, Instant createdTimestamp, Instant publishedTimestamp,
-            Instant failedTimestamp, Long aggregateId, Long aggregateVersion,
-            Instant processingStartedAt) {
+	public OutboxEvent(Long id, UUID eventId, UUID originalEventId, OutboxEventType eventType, String kafkaKey,
+			String payload, OutboxEventStatus status, Long retryCount, Instant nextRetryTime, String lastErrorMessage,
+			Instant createdTimestamp, Instant publishedTimestamp, Instant failedTimestamp, Long aggregateId,
+			Long aggregateVersion, Instant processingStartedAt) {
 
-        if (eventId == null) {
-            throw new IllegalArgumentException("Event Id cannot be null");
-        }
-        if (eventType == null) {
-            throw new IllegalArgumentException("Event type cannot be null");
-        }
-        if (kafkaKey == null || kafkaKey.isBlank()) {
-            throw new IllegalArgumentException("Kafka key cannot be blank");
-        }
-        if (payload == null || payload.isBlank()) {
-            throw new IllegalArgumentException("Payload cannot be blank");
-        }
-        if (aggregateId == null || aggregateId <= 0) {
-            throw new IllegalArgumentException("Aggregate id must be positive");
-        }
-        if (aggregateVersion == null || aggregateVersion < 0) {
-            throw new IllegalArgumentException("Aggregate version must be non-negative");
-        }
-        if (retryCount == null || retryCount < 0) {
-            throw new IllegalArgumentException("Retry count must be non-negative");
-        }
-        if (status == null || createdTimestamp == null) {
-            throw new IllegalArgumentException("Status and created timestamp cannot be null");
-        }
-        this.id = id;
-        this.eventId = eventId;
-        this.originalEventId = originalEventId;
-        this.eventType = eventType;
-        this.kafkaKey = kafkaKey;
-        this.payload = payload;
-        this.status = status;
-        this.retryCount = retryCount;
-        this.nextRetryTime = nextRetryTime;
-        this.lastErrorMessage = lastErrorMessage;
-        this.createdTimestamp = createdTimestamp;
-        this.publishedTimestamp = publishedTimestamp;
-        this.failedTimestamp = failedTimestamp;
-        this.aggregateId = aggregateId;
-        this.aggregateVersion = aggregateVersion;
-        this.processingStartedAt = processingStartedAt;
-    }
+		if (eventId == null) {
+			throw new IllegalArgumentException("Event Id cannot be null");
+		}
+		if (eventType == null) {
+			throw new IllegalArgumentException("Event type cannot be null");
+		}
+		if (kafkaKey == null || kafkaKey.isBlank()) {
+			throw new IllegalArgumentException("Kafka key cannot be blank");
+		}
+		if (payload == null || payload.isBlank()) {
+			throw new IllegalArgumentException("Payload cannot be blank");
+		}
+		if (aggregateId == null || aggregateId <= 0) {
+			throw new IllegalArgumentException("Aggregate id must be positive");
+		}
+		if (aggregateVersion == null || aggregateVersion < 0) {
+			throw new IllegalArgumentException("Aggregate version must be non-negative");
+		}
+		if (retryCount == null || retryCount < 0) {
+			throw new IllegalArgumentException("Retry count must be non-negative");
+		}
+		if (status == null || createdTimestamp == null) {
+			throw new IllegalArgumentException("Status and created timestamp cannot be null");
+		}
+		this.id = id;
+		this.eventId = eventId;
+		this.originalEventId = originalEventId;
+		this.eventType = eventType;
+		this.kafkaKey = kafkaKey;
+		this.payload = payload;
+		this.status = status;
+		this.retryCount = retryCount;
+		this.nextRetryTime = nextRetryTime;
+		this.lastErrorMessage = lastErrorMessage;
+		this.createdTimestamp = createdTimestamp;
+		this.publishedTimestamp = publishedTimestamp;
+		this.failedTimestamp = failedTimestamp;
+		this.aggregateId = aggregateId;
+		this.aggregateVersion = aggregateVersion;
+		this.processingStartedAt = processingStartedAt;
+	}
 
-    /** Backward-compatible constructor for callers that do not claim an event yet. */
-    public OutboxEvent(Long id, UUID eventId, UUID originalEventId, OutboxEventType eventType, String kafkaKey,
-            String payload, OutboxEventStatus status, Long retryCount, Instant nextRetryTime,
-            String lastErrorMessage, Instant createdTimestamp, Instant publishedTimestamp,
-            Instant failedTimestamp, Long aggregateId, Long aggregateVersion) {
-        this(id, eventId, originalEventId, eventType, kafkaKey, payload, status, retryCount, nextRetryTime,
-                lastErrorMessage, createdTimestamp, publishedTimestamp, failedTimestamp, aggregateId,
-                aggregateVersion, null);
-    }
+	/**
+	 * Backward-compatible constructor for callers that do not claim an event yet.
+	 */
+	public OutboxEvent(Long id, UUID eventId, UUID originalEventId, OutboxEventType eventType, String kafkaKey,
+			String payload, OutboxEventStatus status, Long retryCount, Instant nextRetryTime, String lastErrorMessage,
+			Instant createdTimestamp, Instant publishedTimestamp, Instant failedTimestamp, Long aggregateId,
+			Long aggregateVersion) {
+		this(id, eventId, originalEventId, eventType, kafkaKey, payload, status, retryCount, nextRetryTime,
+				lastErrorMessage, createdTimestamp, publishedTimestamp, failedTimestamp, aggregateId, aggregateVersion,
+				null);
+	}
 
-    public Long getId() {
-        return id;
-    }
+	public Long getId() {
+		return id;
+	}
 
-    public UUID getEventId() {
-        return eventId;
-    }
+	public UUID getEventId() {
+		return eventId;
+	}
 
-    public UUID getOriginalEventId() {
-        return originalEventId;
-    }
+	public UUID getOriginalEventId() {
+		return originalEventId;
+	}
 
-    public OutboxEventType getEventType() {
-        return eventType;
-    }
+	public OutboxEventType getEventType() {
+		return eventType;
+	}
 
-    public String getKafkaKey() {
-        return kafkaKey;
-    }
+	public String getKafkaKey() {
+		return kafkaKey;
+	}
 
-    public String getPayload() {
-        return payload;
-    }
+	public String getPayload() {
+		return payload;
+	}
 
-    public Long getAggregateId() {
-        return aggregateId;
-    }
+	public Long getAggregateId() {
+		return aggregateId;
+	}
 
-    public Long getAggregateVersion() {
-        return aggregateVersion;
-    }
+	public Long getAggregateVersion() {
+		return aggregateVersion;
+	}
 
-    public OutboxEventStatus getStatus() {
-        return status;
-    }
+	public OutboxEventStatus getStatus() {
+		return status;
+	}
 
-    public Long getRetryCount() {
-        return retryCount;
-    }
+	public Long getRetryCount() {
+		return retryCount;
+	}
 
-    public Instant getNextRetryTime() {
-        return nextRetryTime;
-    }
+	public Instant getNextRetryTime() {
+		return nextRetryTime;
+	}
 
-    public String getLastErrorMessage() {
-        return lastErrorMessage;
-    }
+	public String getLastErrorMessage() {
+		return lastErrorMessage;
+	}
 
-    public Instant getCreatedTimestamp() {
-        return createdTimestamp;
-    }
+	public Instant getCreatedTimestamp() {
+		return createdTimestamp;
+	}
 
-    public Instant getPublishedTimestamp() {
-        return publishedTimestamp;
-    }
+	public Instant getPublishedTimestamp() {
+		return publishedTimestamp;
+	}
 
-    public Instant getFailedTimestamp() {
-        return failedTimestamp;
-    }
+	public Instant getFailedTimestamp() {
+		return failedTimestamp;
+	}
 
-    public Instant getProcessingStartedAt() {
-        return processingStartedAt;
-    }
+	public Instant getProcessingStartedAt() {
+		return processingStartedAt;
+	}
 
-    
 }

@@ -10,28 +10,29 @@ import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.stereotype.Component;
 
-/** Reports whether the Kafka broker can answer a lightweight metadata request. */
+/**
+ * Reports whether the Kafka broker can answer a lightweight metadata request.
+ */
 @Component("kafkaHealthIndicator")
 public class KafkaHealthIndicator implements HealthIndicator {
 
-    private final String bootstrapServers;
+	private static final long METADATA_TIMEOUT_SECONDS = 10L;
 
-    public KafkaHealthIndicator(
-            @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers) {
-        this.bootstrapServers = bootstrapServers;
-    }
+	private final String bootstrapServers;
 
-    @Override
-    public Health health() {
-        try (AdminClient adminClient = AdminClient.create(Map.of(
-                AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers))) {
-            int brokerCount = adminClient.describeCluster()
-                    .nodes()
-                    .get(10, TimeUnit.SECONDS)
-                    .size();
-            return Health.up().withDetail("brokerCount", brokerCount).build();
-        } catch (Exception exception) {
-            return Health.down(exception).build();
-        }
-    }
+	public KafkaHealthIndicator(@Value("${spring.kafka.bootstrap-servers}") String bootstrapServers) {
+		this.bootstrapServers = bootstrapServers;
+	}
+
+	@Override
+	public Health health() {
+		try (AdminClient adminClient = AdminClient
+				.create(Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers))) {
+			int brokerCount = adminClient.describeCluster().nodes().get(METADATA_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+					.size();
+			return Health.up().withDetail("brokerCount", brokerCount).build();
+		} catch (Exception exception) {
+			return Health.down(exception).build();
+		}
+	}
 }

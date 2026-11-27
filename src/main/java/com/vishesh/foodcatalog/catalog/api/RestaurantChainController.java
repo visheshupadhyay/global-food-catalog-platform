@@ -21,55 +21,47 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/restaurant-chains")
 @RestController
 public class RestaurantChainController {
-    private final RestaurantChainService service;
+	private final RestaurantChainService service;
 
-    public RestaurantChainController(RestaurantChainService service) {
-        this.service = service;
-    }
+	public RestaurantChainController(RestaurantChainService service) {
+		this.service = service;
+	}
 
-    @PostMapping
-    public ResponseEntity<RestaurantChainCreatedResponse> createRestaurantChain(
-            @Valid @RequestBody CreateRestaurantChainRequest request) {
+	@PostMapping
+	public ResponseEntity<RestaurantChainCreatedResponse> createRestaurantChain(
+			@Valid @RequestBody CreateRestaurantChainRequest request) {
 
-        // The controller is the HTTP front door; business rules stay in the service.
-        RestaurantChain restaurantChain = service.createChain(request.getBusinessCode(), request.getDisplayName());
-        RestaurantChainCreatedResponse response = new RestaurantChainCreatedResponse(restaurantChain.getId(),
-                restaurantChain.getStatus());
+		// The controller is the HTTP front door; business rules stay in the service.
+		RestaurantChain restaurantChain = service.createChain(request.getBusinessCode(), request.getDisplayName());
+		RestaurantChainCreatedResponse response = new RestaurantChainCreatedResponse(restaurantChain.getId(),
+				restaurantChain.getStatus());
 
-        // Tell the caller where the new chain can be found later.
-        URI location = URI.create("/api/v1/restaurant-chains/" + response.id());
+		// Tell the caller where the new chain can be found later.
+		URI location = URI.create("/api/v1/restaurant-chains/" + response.id());
 
-        return ResponseEntity.created(location).body(response);
-    }
+		return ResponseEntity.created(location).body(response);
+	}
 
-    @GetMapping("/{id}")
-    public ResponseEntity<RestaurantChainResponse> getRestaurantChainById(@PathVariable Long id) {
+	@GetMapping("/{id}")
+	public ResponseEntity<RestaurantChainResponse> getRestaurantChainById(@PathVariable Long id) {
 
-        // The controller is the HTTP front door; business rules stay in the service.
-        RestaurantChain restaurantChain = service.findChainById(id);
-        RestaurantChainResponse response = new RestaurantChainResponse(restaurantChain.getId(),
-                restaurantChain.getBusinessCode(),
-                restaurantChain.getDisplayName(),
-                restaurantChain.getStatus(),
-                restaurantChain.getCreatedAt(),
-                restaurantChain.getUpdatedAt());
+		// The controller is the HTTP front door; business rules stay in the service.
+		RestaurantChain restaurantChain = service.findChainById(id);
+		return ResponseEntity.ok(toResponse(restaurantChain));
+	}
 
-        return ResponseEntity.ok(response);
-    }
+	@GetMapping("/by-business-code/{businessCode}")
+	public ResponseEntity<RestaurantChainResponse> getRestaurantChainByBusinessCode(@PathVariable String businessCode) {
 
-    @GetMapping("/by-business-code/{businessCode}")
-    public ResponseEntity<RestaurantChainResponse> getRestaurantChainByBusinessCode(
-            @PathVariable String businessCode) {
+		// The controller is the HTTP front door; business rules stay in the service.
+		RestaurantChain restaurantChain = service.findChainByBusinessCode(businessCode);
+		return ResponseEntity.ok(toResponse(restaurantChain));
+	}
 
-        // The controller is the HTTP front door; business rules stay in the service.
-        RestaurantChain restaurantChain = service.findChainByBusinessCode(businessCode);
-        RestaurantChainResponse response = new RestaurantChainResponse(restaurantChain.getId(),
-                restaurantChain.getBusinessCode(),
-                restaurantChain.getDisplayName(),
-                restaurantChain.getStatus(),
-                restaurantChain.getCreatedAt(),
-                restaurantChain.getUpdatedAt());
-
-        return ResponseEntity.ok(response);
-    }
+	/** Maps a domain chain to the stable JSON shape exposed by this API. */
+	private RestaurantChainResponse toResponse(RestaurantChain restaurantChain) {
+		return new RestaurantChainResponse(restaurantChain.getId(), restaurantChain.getBusinessCode(),
+				restaurantChain.getDisplayName(), restaurantChain.getStatus(), restaurantChain.getCreatedAt(),
+				restaurantChain.getUpdatedAt());
+	}
 }

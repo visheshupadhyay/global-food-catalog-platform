@@ -8,7 +8,7 @@ import java.util.Optional;
 /** Spring Data creates PostgreSQL queries from these method names. */
 public interface RestaurantChainJpaRepository extends JpaRepository<RestaurantChainEntity, Long> {
 
-    Optional<RestaurantChainEntity> findByBusinessCode(String businessCode);
+	Optional<RestaurantChainEntity> findByBusinessCode(String businessCode);
 
-    boolean existsByBusinessCode(String businessCode);
+	boolean existsByBusinessCode(String businessCode);
 }

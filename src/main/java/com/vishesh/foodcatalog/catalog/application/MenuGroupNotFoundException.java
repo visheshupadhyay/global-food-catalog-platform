@@ -5,8 +5,8 @@ package com.vishesh.foodcatalog.catalog.application;
  */
 public class MenuGroupNotFoundException extends RuntimeException {
 
-    public MenuGroupNotFoundException(String message) {
-        super(message);
-    }
+	public MenuGroupNotFoundException(String message) {
+		super(message);
+	}
 
 }

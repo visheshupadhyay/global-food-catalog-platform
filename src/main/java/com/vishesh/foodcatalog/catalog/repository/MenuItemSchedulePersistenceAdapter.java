@@ -15,58 +15,54 @@ import com.vishesh.foodcatalog.catalog.domain.Weekday;
  */
 @Repository
 public class MenuItemSchedulePersistenceAdapter implements MenuItemScheduleRepository {
-    private final MenuItemScheduleJpaRepository repository;
+	private final MenuItemScheduleJpaRepository repository;
 
-    public MenuItemSchedulePersistenceAdapter(MenuItemScheduleJpaRepository repository) {
-        this.repository = repository;
-    }
+	public MenuItemSchedulePersistenceAdapter(MenuItemScheduleJpaRepository repository) {
+		this.repository = repository;
+	}
 
-    @Override
-    public MenuItemSchedule save(MenuItemSchedule schedule) {
-        Long currentVersion = repository.findMaxVersion(schedule.getMenuItemId(), schedule.getOutletId());
-        Long nextVersion = (currentVersion == null ? -1L : currentVersion) + 1L;
-        if (schedule.getOutletId() == null) {
-            repository.deleteByMenuItemIdAndOutletIdIsNull(schedule.getMenuItemId());
-        } else {
-            repository.deleteByMenuItemIdAndOutletId(schedule.getMenuItemId(), schedule.getOutletId());
-        }
-        List<MenuItemScheduleEntity> rows = new ArrayList<>();
+	@Override
+	public MenuItemSchedule save(MenuItemSchedule schedule) {
+		Long currentVersion = repository.findMaxVersion(schedule.getMenuItemId(), schedule.getOutletId());
+		Long nextVersion = (currentVersion == null ? -1L : currentVersion) + 1L;
+		if (schedule.getOutletId() == null) {
+			repository.deleteByMenuItemIdAndOutletIdIsNull(schedule.getMenuItemId());
+		} else {
+			repository.deleteByMenuItemIdAndOutletId(schedule.getMenuItemId(), schedule.getOutletId());
+		}
+		List<MenuItemScheduleEntity> rows = new ArrayList<>();
 
-        for (var dayEntry : schedule.getWindowsByDay().entrySet()) {
-            Weekday weekday = dayEntry.getKey();
-            List<ScheduleWindow> dayWindows = dayEntry.getValue();
+		for (var dayEntry : schedule.getWindowsByDay().entrySet()) {
+			Weekday weekday = dayEntry.getKey();
+			List<ScheduleWindow> dayWindows = dayEntry.getValue();
 
-            for (ScheduleWindow window : dayWindows) {
-                MenuItemScheduleEntity row = new MenuItemScheduleEntity(
-                        schedule.getMenuItemId(), schedule.getOutletId(), weekday,
-                        window.getStartTime(), window.getEndTime(), nextVersion);
-                rows.add(row);
-            }
-        }
-        repository.saveAll(rows);
-        return new MenuItemSchedule(schedule.getMenuItemId(), schedule.getOutletId(),
-                schedule.getWindowsByDay(), nextVersion);
-    }
+			for (ScheduleWindow window : dayWindows) {
+				MenuItemScheduleEntity row = new MenuItemScheduleEntity(schedule.getMenuItemId(),
+						schedule.getOutletId(), weekday, window.getStartTime(), window.getEndTime(), nextVersion);
+				rows.add(row);
+			}
+		}
+		repository.saveAll(rows);
+		return new MenuItemSchedule(schedule.getMenuItemId(), schedule.getOutletId(), schedule.getWindowsByDay(),
+				nextVersion);
+	}
 
-    @Override
-    public Optional<MenuItemSchedule> find(Long menuItemId, Long outletId) {
-        List<MenuItemScheduleEntity> rows = outletId == null
-                ? repository.findByMenuItemIdAndOutletIdIsNull(menuItemId)
-                : repository.findByMenuItemIdAndOutletId(menuItemId, outletId);
-        if (rows.isEmpty())
-            return Optional.empty();
-        EnumMap<Weekday, List<ScheduleWindow>> windows = new EnumMap<>(Weekday.class);
-        Long version = rows.stream().map(MenuItemScheduleEntity::getVersion).max(Long::compareTo).orElse(0L);
-        for (MenuItemScheduleEntity row : rows) {
-            Weekday weekday = row.getWeekday();
-            List<ScheduleWindow> dayWindows = windows.computeIfAbsent(
-                    weekday,
-                    ignored -> new ArrayList<>());
+	@Override
+	public Optional<MenuItemSchedule> find(Long menuItemId, Long outletId) {
+		List<MenuItemScheduleEntity> rows = outletId == null
+				? repository.findByMenuItemIdAndOutletIdIsNull(menuItemId)
+				: repository.findByMenuItemIdAndOutletId(menuItemId, outletId);
+		if (rows.isEmpty())
+			return Optional.empty();
+		EnumMap<Weekday, List<ScheduleWindow>> windows = new EnumMap<>(Weekday.class);
+		Long version = rows.stream().map(MenuItemScheduleEntity::getVersion).max(Long::compareTo).orElse(0L);
+		for (MenuItemScheduleEntity row : rows) {
+			Weekday weekday = row.getWeekday();
+			List<ScheduleWindow> dayWindows = windows.computeIfAbsent(weekday, ignored -> new ArrayList<>());
 
-            ScheduleWindow window = new ScheduleWindow(
-                    row.getStartTime(), row.getEndTime());
-            dayWindows.add(window);
-        }
-        return Optional.of(new MenuItemSchedule(menuItemId, outletId, windows, version));
-    }
+			ScheduleWindow window = new ScheduleWindow(row.getStartTime(), row.getEndTime());
+			dayWindows.add(window);
+		}
+		return Optional.of(new MenuItemSchedule(menuItemId, outletId, windows, version));
+	}
 }

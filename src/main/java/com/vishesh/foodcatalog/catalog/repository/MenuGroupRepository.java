@@ -6,9 +6,9 @@ import com.vishesh.foodcatalog.catalog.domain.MenuGroup;
 
 /** Business-facing storage operations for menu groups. */
 public interface MenuGroupRepository {
-    MenuGroup save(MenuGroup menuGroup);
+	MenuGroup save(MenuGroup menuGroup);
 
-    Optional<MenuGroup> findByIdAndRestaurantChainId(Long menuGroupId, Long restaurantChainId);
+	Optional<MenuGroup> findByIdAndRestaurantChainId(Long menuGroupId, Long restaurantChainId);
 
-    boolean existsNonArchivedByRestaurantChainIdAndDisplayName(Long restaurantChainId, String displayName);
+	boolean existsNonArchivedByRestaurantChainIdAndDisplayName(Long restaurantChainId, String displayName);
 }

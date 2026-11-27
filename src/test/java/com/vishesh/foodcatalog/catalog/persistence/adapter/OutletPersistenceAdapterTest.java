@@ -15,27 +15,27 @@ import com.vishesh.foodcatalog.catalog.persistence.mapper.OutletMapper;
 
 @ExtendWith(MockitoExtension.class)
 class OutletPersistenceAdapterTest {
-    @Mock
-    private OutletJpaRepository repository;
+	@Mock
+	private OutletJpaRepository repository;
 
-    @Test
-    void existsByIdAndRestaurantChainId_forwardsBothIds() {
-        when(repository.existsByIdAndRestaurantChainId(7L, 42L)).thenReturn(true);
+	@Test
+	void existsByIdAndRestaurantChainId_forwardsBothIds() {
+		when(repository.existsByIdAndRestaurantChainId(7L, 42L)).thenReturn(true);
 
-        boolean result = new OutletPersistenceAdapter(repository, new OutletMapper())
-                .existsByIdAndRestaurantChainId(7L, 42L);
+		boolean result = new OutletPersistenceAdapter(repository, new OutletMapper()).existsByIdAndRestaurantChainId(7L,
+				42L);
 
-        assertTrue(result);
-        verify(repository).existsByIdAndRestaurantChainId(7L, 42L);
-    }
+		assertTrue(result);
+		verify(repository).existsByIdAndRestaurantChainId(7L, 42L);
+	}
 
-    @Test
-    void existsByIdAndRestaurantChainId_returnsFalseWhenJpaReturnsFalse() {
-        when(repository.existsByIdAndRestaurantChainId(7L, 42L)).thenReturn(false);
+	@Test
+	void existsByIdAndRestaurantChainId_returnsFalseWhenJpaReturnsFalse() {
+		when(repository.existsByIdAndRestaurantChainId(7L, 42L)).thenReturn(false);
 
-        boolean result = new OutletPersistenceAdapter(repository, new OutletMapper())
-                .existsByIdAndRestaurantChainId(7L, 42L);
+		boolean result = new OutletPersistenceAdapter(repository, new OutletMapper()).existsByIdAndRestaurantChainId(7L,
+				42L);
 
-        assertFalse(result);
-    }
+		assertFalse(result);
+	}
 }
