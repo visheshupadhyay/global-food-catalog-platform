@@ -5,13 +5,13 @@ import java.util.Optional;
 import com.vishesh.foodcatalog.catalog.domain.Outlet;
 
 public interface OutletRepository {
-    Outlet save(Outlet outlet);
+	Outlet save(Outlet outlet);
 
-    Optional<Outlet> findById(Long outletId);
+	Optional<Outlet> findById(Long outletId);
 
-    boolean existsByIdAndRestaurantChainId(Long outletId, Long restaurantChainId);
+	boolean existsByIdAndRestaurantChainId(Long outletId, Long restaurantChainId);
 
-    boolean existsByRestaurantChainIdAndOutletCode(Long restaurantChainId, String outletCode);
+	boolean existsByRestaurantChainIdAndOutletCode(Long restaurantChainId, String outletCode);
 
-    Optional<String> findTimezoneById(Long outletId);
+	Optional<String> findTimezoneById(Long outletId);
 }

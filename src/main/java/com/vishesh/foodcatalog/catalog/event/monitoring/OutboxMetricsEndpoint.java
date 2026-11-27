@@ -9,15 +9,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/actuator/outbox")
 /** Exposes durable outbox health for operators and monitoring tools. */
 public class OutboxMetricsEndpoint {
-    private final OutboxMetricsReader reader;
+	private final OutboxMetricsReader reader;
 
-    public OutboxMetricsEndpoint(
-            @Qualifier("outboxMetricsPersistenceAdapter") OutboxMetricsReader reader) {
-        this.reader = reader;
-    }
+	public OutboxMetricsEndpoint(@Qualifier("outboxMetricsPersistenceAdapter") OutboxMetricsReader reader) {
+		this.reader = reader;
+	}
 
-    @GetMapping
-    public OutboxMetrics readMetrics() {
-        return reader.readMetrics();
-    }
+	@GetMapping
+	public OutboxMetrics readMetrics() {
+		return reader.readMetrics();
+	}
 }

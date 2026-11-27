@@ -10,44 +10,32 @@ import org.springframework.transaction.annotation.Transactional;
 import com.vishesh.foodcatalog.catalog.event.domain.OutboxEvent;
 import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventStatus;
 
-/** Creates a fresh pending delivery attempt without changing the original event. */
+/**
+ * Creates a fresh pending delivery attempt without changing the original event.
+ */
 @Service
 /** Creates a fresh pending event when an operator replays a failed event. */
 public class OutboxEventReplayService {
 
-    private final OutboxEventRepository repository;
+	private final OutboxEventRepository repository;
 
-    public OutboxEventReplayService(
-            @Qualifier("outboxEventPersistenceAdapter") OutboxEventRepository repository) {
-        this.repository = repository;
-    }
+	public OutboxEventReplayService(@Qualifier("outboxEventPersistenceAdapter") OutboxEventRepository repository) {
+		this.repository = repository;
+	}
 
-    @Transactional
-    public OutboxEvent replay(UUID originalEventId) {
-        if (originalEventId == null) {
-            throw new IllegalArgumentException("Original event id cannot be null");
-        }
+	@Transactional
+	public OutboxEvent replay(UUID originalEventId) {
+		if (originalEventId == null) {
+			throw new IllegalArgumentException("Original event id cannot be null");
+		}
 
-        OutboxEvent original = repository.findByEventId(originalEventId)
-                .orElseThrow(() -> new OutboxEventNotFoundException(originalEventId.toString()));
+		OutboxEvent original = repository.findByEventId(originalEventId)
+				.orElseThrow(() -> new OutboxEventNotFoundException(originalEventId.toString()));
 
-        OutboxEvent replay = new OutboxEvent(
-                null,
-                UUID.randomUUID(),
-                original.getEventId(),
-                original.getEventType(),
-                original.getKafkaKey(),
-                original.getPayload(),
-                OutboxEventStatus.PENDING,
-                0L,
-                null,
-                null,
-                Instant.now(),
-                null,
-                null,
-                original.getAggregateId(),
-                original.getAggregateVersion());
+		OutboxEvent replay = new OutboxEvent(null, UUID.randomUUID(), original.getEventId(), original.getEventType(),
+				original.getKafkaKey(), original.getPayload(), OutboxEventStatus.PENDING, 0L, null, null, Instant.now(),
+				null, null, original.getAggregateId(), original.getAggregateVersion());
 
-        return repository.save(replay);
-    }
+		return repository.save(replay);
+	}
 }

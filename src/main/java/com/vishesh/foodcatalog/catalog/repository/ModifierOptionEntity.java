@@ -13,53 +13,52 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "modifier_option")
 public class ModifierOptionEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name = "modifier_group_id", nullable = false)
-    private Long modifierGroupId;
-    @Column(name = "option_name", nullable = false, length = 100)
-    private String optionName;
-    @Column(name = "price_delta", nullable = false, precision = 12, scale = 2)
-    private BigDecimal priceDelta;
-    @Column(name = "display_order", nullable = false)
-    private int displayOrder;
+	@Column(name = "modifier_group_id", nullable = false)
+	private Long modifierGroupId;
+	@Column(name = "option_name", nullable = false, length = 100)
+	private String optionName;
+	@Column(name = "price_delta", nullable = false, precision = 12, scale = 2)
+	private BigDecimal priceDelta;
+	@Column(name = "display_order", nullable = false)
+	private int displayOrder;
 
-    protected ModifierOptionEntity() {
-    }
+	protected ModifierOptionEntity() {
+	}
 
-    public ModifierOptionEntity(Long modifierGroupId, String optionName,
-            BigDecimal priceDelta, int displayOrder) {
-        this.modifierGroupId = modifierGroupId;
-        this.optionName = optionName;
-        this.priceDelta = priceDelta;
-        this.displayOrder = displayOrder;
-    }
+	public ModifierOptionEntity(Long modifierGroupId, String optionName, BigDecimal priceDelta, int displayOrder) {
+		this.modifierGroupId = modifierGroupId;
+		this.optionName = optionName;
+		this.priceDelta = priceDelta;
+		this.displayOrder = displayOrder;
+	}
 
-    public Long getId() {
-        return id;
-    }
+	public Long getId() {
+		return id;
+	}
 
-    public Long getModifierGroupId() {
-        return modifierGroupId;
-    }
+	public Long getModifierGroupId() {
+		return modifierGroupId;
+	}
 
-    public String getOptionName() {
-        return optionName;
-    }
+	public String getOptionName() {
+		return optionName;
+	}
 
-    public BigDecimal getPriceDelta() {
-        return priceDelta;
-    }
+	public BigDecimal getPriceDelta() {
+		return priceDelta;
+	}
 
-    public int getDisplayOrder() {
-        return displayOrder;
-    }
+	public int getDisplayOrder() {
+		return displayOrder;
+	}
 
-    public void update(String optionName, BigDecimal priceDelta, int displayOrder) {
-        this.optionName = optionName;
-        this.priceDelta = priceDelta;
-        this.displayOrder = displayOrder;
-    }
+	public void update(String optionName, BigDecimal priceDelta, int displayOrder) {
+		this.optionName = optionName;
+		this.priceDelta = priceDelta;
+		this.displayOrder = displayOrder;
+	}
 }

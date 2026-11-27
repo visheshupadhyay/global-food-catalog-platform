@@ -34,8 +34,7 @@ class EffectiveMenuAssemblerTest {
 
 	@Test
 	void assemble_appliesMatchingOutletOverrideToBaseItem() {
-		List<EffectiveMenuItem> result = assemble(
-				List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)),
+		List<EffectiveMenuItem> result = assemble(List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)),
 				List.of(new OutletOverrideSnapshot(101L, BERLIN_OUTLET_ID, new BigDecimal("12.50"), false, null)),
 				List.of());
 
@@ -45,18 +44,15 @@ class EffectiveMenuAssemblerTest {
 
 	@Test
 	void assemble_excludesNonActiveBaseItems() {
-		List<EffectiveMenuItem> result = assemble(
-				List.of(baseItem(101L, "Draft", true, true, MenuItemStatus.DRAFT),
-						baseItem(102L, "Archived", true, true, MenuItemStatus.ARCHIVED)),
-				List.of(), List.of());
+		List<EffectiveMenuItem> result = assemble(List.of(baseItem(101L, "Draft", true, true, MenuItemStatus.DRAFT),
+				baseItem(102L, "Archived", true, true, MenuItemStatus.ARCHIVED)), List.of(), List.of());
 
 		assertTrue(result.isEmpty());
 	}
 
 	@Test
 	void assemble_excludesHiddenEffectiveItems() {
-		List<EffectiveMenuItem> result = assemble(
-				List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)),
+		List<EffectiveMenuItem> result = assemble(List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)),
 				List.of(new OutletOverrideSnapshot(101L, BERLIN_OUTLET_ID, null, null, false)), List.of());
 
 		assertTrue(result.isEmpty());
@@ -64,8 +60,8 @@ class EffectiveMenuAssemblerTest {
 
 	@Test
 	void assemble_keepsVisibleUnavailableItems() {
-		List<EffectiveMenuItem> result = assemble(
-				List.of(baseItem(101L, "Burger", false, true, MenuItemStatus.ACTIVE)), List.of(), List.of());
+		List<EffectiveMenuItem> result = assemble(List.of(baseItem(101L, "Burger", false, true, MenuItemStatus.ACTIVE)),
+				List.of(), List.of());
 
 		assertEquals(1, result.size());
 		assertFalse(result.getFirst().isAvailable());
@@ -82,14 +78,11 @@ class EffectiveMenuAssemblerTest {
 
 	@Test
 	void assemble_forBerlin_includesOnlyBerlinLocalItems() {
-		List<EffectiveMenuItem> result = assembler.assemble(
-				BERLIN_OUTLET_ID,
-				List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)),
-				List.of(),
+		List<EffectiveMenuItem> result = assembler.assemble(BERLIN_OUTLET_ID,
+				List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)), List.of(),
 				List.of(localItem(201L, BERLIN_OUTLET_ID, "Berlin Special", true, true, MenuItemStatus.ACTIVE)));
 
-		assertEquals(List.of("Berlin Special", "Burger"),
-				result.stream().map(EffectiveMenuItem::getItemName).toList());
+		assertEquals(List.of("Berlin Special", "Burger"), result.stream().map(EffectiveMenuItem::getItemName).toList());
 		assertTrue(result.stream().anyMatch(item -> item.getMenuItemId().equals(201L)));
 	}
 
@@ -110,18 +103,16 @@ class EffectiveMenuAssemblerTest {
 
 	@Test
 	void assemble_forMunich_rejectsBerlinLocalItemInsteadOfLeakingIt() {
-		assertThrows(IllegalArgumentException.class, () -> assembler.assemble(
-				MUNICH_OUTLET_ID,
-				List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)),
-				List.of(),
+		assertThrows(IllegalArgumentException.class, () -> assembler.assemble(MUNICH_OUTLET_ID,
+				List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)), List.of(),
 				List.of(localItem(201L, BERLIN_OUTLET_ID, "Berlin Special", true, true, MenuItemStatus.ACTIVE))));
 	}
 
 	@Test
 	void assemble_rejectsOverrideForAnotherOutlet() {
-		assertThrows(IllegalArgumentException.class, () -> assemble(
-				List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)),
-				List.of(new OutletOverrideSnapshot(101L, MUNICH_OUTLET_ID, null, null, null)), List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> assemble(List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)),
+						List.of(new OutletOverrideSnapshot(101L, MUNICH_OUTLET_ID, null, null, null)), List.of()));
 	}
 
 	@Test
@@ -129,11 +120,9 @@ class EffectiveMenuAssemblerTest {
 		List<EffectiveMenuItem> result = assemble(
 				List.of(baseItem(101L, "Fries", true, true, MenuItemStatus.ACTIVE),
 						baseItem(102L, "burger", true, true, MenuItemStatus.ACTIVE)),
-				List.of(),
-				List.of(localItem(201L, BERLIN_OUTLET_ID, "Cola", true, true, MenuItemStatus.ACTIVE)));
+				List.of(), List.of(localItem(201L, BERLIN_OUTLET_ID, "Cola", true, true, MenuItemStatus.ACTIVE)));
 
-		assertEquals(List.of("burger", "Cola", "Fries"),
-				result.stream().map(EffectiveMenuItem::getItemName).toList());
+		assertEquals(List.of("burger", "Cola", "Fries"), result.stream().map(EffectiveMenuItem::getItemName).toList());
 	}
 
 	@Test
@@ -147,10 +136,10 @@ class EffectiveMenuAssemblerTest {
 
 	@Test
 	void assemble_rejectsOverrideWithoutSuppliedBaseItem() {
-		assertThrows(IllegalArgumentException.class, () -> assemble(
-				List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)),
-				List.of(new OutletOverrideSnapshot(999L, BERLIN_OUTLET_ID, new BigDecimal("12.50"), false, null)),
-				List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> assemble(List.of(baseItem(101L, "Burger", true, true, MenuItemStatus.ACTIVE)), List
+						.of(new OutletOverrideSnapshot(999L, BERLIN_OUTLET_ID, new BigDecimal("12.50"), false, null)),
+						List.of()));
 	}
 
 	@Test
@@ -201,10 +190,8 @@ class EffectiveMenuAssemblerTest {
 		assertTrue(result.get(0).isAvailable());
 	}
 
-	private List<EffectiveMenuItem> assemble(
-			List<BaseMenuItemSnapshot> baseItems,
-			List<OutletOverrideSnapshot> overrides,
-			List<OutletLocalMenuItemSnapshot> localItems) {
+	private List<EffectiveMenuItem> assemble(List<BaseMenuItemSnapshot> baseItems,
+			List<OutletOverrideSnapshot> overrides, List<OutletLocalMenuItemSnapshot> localItems) {
 		return assembler.assemble(BERLIN_OUTLET_ID, baseItems, overrides, localItems);
 	}
 
@@ -213,8 +200,8 @@ class EffectiveMenuAssemblerTest {
 		return new BaseMenuItemSnapshot(id, name, new BigDecimal("10.00"), available, visible, status);
 	}
 
-	private OutletLocalMenuItemSnapshot localItem(
-			Long id, Long outletId, String name, boolean available, boolean visible, MenuItemStatus status) {
+	private OutletLocalMenuItemSnapshot localItem(Long id, Long outletId, String name, boolean available,
+			boolean visible, MenuItemStatus status) {
 		return new OutletLocalMenuItemSnapshot(id, outletId, name, new BigDecimal("9.00"), available, visible, status);
 	}
 

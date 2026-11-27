@@ -9,99 +9,92 @@ import java.util.UUID;
  * Menu can create its first outlet snapshot from this event alone.
  */
 public final class OutletMenuInitializedEvent {
-    private final UUID eventId;
-    private final Long outletId;
-    private final Long restaurantChainId;
-    private final Long menuGroupId;
-    private final Long outletVersion;
-    private final String outletTimezone;
-    private final Instant occurredAt;
-    private final String correlationId;
-    private final List<OutletMenuItemSnapshot> menuItems;
+	private final UUID eventId;
+	private final Long outletId;
+	private final Long restaurantChainId;
+	private final Long menuGroupId;
+	private final Long outletVersion;
+	private final String outletTimezone;
+	private final Instant occurredAt;
+	private final String correlationId;
+	private final List<OutletMenuItemSnapshot> menuItems;
 
-    public OutletMenuInitializedEvent(
-            UUID eventId,
-            Long outletId,
-            Long restaurantChainId,
-            Long menuGroupId,
-            Long outletVersion,
-            String outletTimezone,
-            Instant occurredAt,
-            String correlationId,
-            List<OutletMenuItemSnapshot> menuItems) {
-        if (eventId == null) {
-            throw new IllegalArgumentException("Event ID is required");
-        }
-        validatePositive(outletId, "Outlet ID");
-        validatePositive(restaurantChainId, "Restaurant chain ID");
-        validatePositive(menuGroupId, "Menu group ID");
-        if (outletVersion == null || outletVersion < 0) {
-            throw new IllegalArgumentException("Outlet version must be zero or greater");
-        }
-        if (outletTimezone == null || outletTimezone.isBlank()) {
-            throw new IllegalArgumentException("Outlet timezone is required");
-        }
-        if (occurredAt == null) {
-            throw new IllegalArgumentException("Occurred at is required");
-        }
-        if (menuItems == null) {
-            throw new IllegalArgumentException("Complete menu items are required");
-        }
+	public OutletMenuInitializedEvent(UUID eventId, Long outletId, Long restaurantChainId, Long menuGroupId,
+			Long outletVersion, String outletTimezone, Instant occurredAt, String correlationId,
+			List<OutletMenuItemSnapshot> menuItems) {
+		if (eventId == null) {
+			throw new IllegalArgumentException("Event ID is required");
+		}
+		validatePositive(outletId, "Outlet ID");
+		validatePositive(restaurantChainId, "Restaurant chain ID");
+		validatePositive(menuGroupId, "Menu group ID");
+		if (outletVersion == null || outletVersion < 0) {
+			throw new IllegalArgumentException("Outlet version must be zero or greater");
+		}
+		if (outletTimezone == null || outletTimezone.isBlank()) {
+			throw new IllegalArgumentException("Outlet timezone is required");
+		}
+		if (occurredAt == null) {
+			throw new IllegalArgumentException("Occurred at is required");
+		}
+		if (menuItems == null) {
+			throw new IllegalArgumentException("Complete menu items are required");
+		}
 
-        this.eventId = eventId;
-        this.outletId = outletId;
-        this.restaurantChainId = restaurantChainId;
-        this.menuGroupId = menuGroupId;
-        this.outletVersion = outletVersion;
-        this.outletTimezone = outletTimezone.trim();
-        this.occurredAt = occurredAt;
-        this.correlationId = correlationId == null ? null : correlationId.trim();
-        this.menuItems = List.copyOf(menuItems);
-    }
+		this.eventId = eventId;
+		this.outletId = outletId;
+		this.restaurantChainId = restaurantChainId;
+		this.menuGroupId = menuGroupId;
+		this.outletVersion = outletVersion;
+		this.outletTimezone = outletTimezone.trim();
+		this.occurredAt = occurredAt;
+		this.correlationId = correlationId == null ? null : correlationId.trim();
+		this.menuItems = List.copyOf(menuItems);
+	}
 
-    private static void validatePositive(Long value, String name) {
-        if (value == null || value <= 0) {
-            throw new IllegalArgumentException(name + " must be positive");
-        }
-    }
+	private static void validatePositive(Long value, String name) {
+		if (value == null || value <= 0) {
+			throw new IllegalArgumentException(name + " must be positive");
+		}
+	}
 
-    public UUID getEventId() {
-        return eventId;
-    }
+	public UUID getEventId() {
+		return eventId;
+	}
 
-    public OutboxEventType getEventType() {
-        return OutboxEventType.OUTLET_MENU_INITIALIZED;
-    }
+	public OutboxEventType getEventType() {
+		return OutboxEventType.OUTLET_MENU_INITIALIZED;
+	}
 
-    public Long getOutletId() {
-        return outletId;
-    }
+	public Long getOutletId() {
+		return outletId;
+	}
 
-    public Long getRestaurantChainId() {
-        return restaurantChainId;
-    }
+	public Long getRestaurantChainId() {
+		return restaurantChainId;
+	}
 
-    public Long getMenuGroupId() {
-        return menuGroupId;
-    }
+	public Long getMenuGroupId() {
+		return menuGroupId;
+	}
 
-    public Long getOutletVersion() {
-        return outletVersion;
-    }
+	public Long getOutletVersion() {
+		return outletVersion;
+	}
 
-    public String getOutletTimezone() {
-        return outletTimezone;
-    }
+	public String getOutletTimezone() {
+		return outletTimezone;
+	}
 
-    public Instant getOccurredAt() {
-        return occurredAt;
-    }
+	public Instant getOccurredAt() {
+		return occurredAt;
+	}
 
-    public String getCorrelationId() {
-        return correlationId;
-    }
+	public String getCorrelationId() {
+		return correlationId;
+	}
 
-    public List<OutletMenuItemSnapshot> getMenuItems() {
-        return menuItems;
-    }
+	public List<OutletMenuItemSnapshot> getMenuItems() {
+		return menuItems;
+	}
 }

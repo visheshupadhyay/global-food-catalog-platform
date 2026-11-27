@@ -1,7 +1,7 @@
 package com.vishesh.foodcatalog.catalog.effective.persistence.projection;
 
 public interface OutletStatusProjection {
-    Long getOutletId();
+	Long getOutletId();
 
-    String getOutletStatus();
+	String getOutletStatus();
 }

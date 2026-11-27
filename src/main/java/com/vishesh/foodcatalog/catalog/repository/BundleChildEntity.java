@@ -11,46 +11,46 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "bundle_child")
 public class BundleChildEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name = "bundle_menu_item_id", nullable = false)
-    private Long bundleMenuItemId;
-    @Column(name = "child_menu_item_id", nullable = false)
-    private Long childMenuItemId;
-    @Column(nullable = false)
-    private int quantity;
-    @Column(name = "display_order", nullable = false)
-    private int displayOrder;
+	@Column(name = "bundle_menu_item_id", nullable = false)
+	private Long bundleMenuItemId;
+	@Column(name = "child_menu_item_id", nullable = false)
+	private Long childMenuItemId;
+	@Column(nullable = false)
+	private int quantity;
+	@Column(name = "display_order", nullable = false)
+	private int displayOrder;
 
-    protected BundleChildEntity() {
-    }
+	protected BundleChildEntity() {
+	}
 
-    public BundleChildEntity(Long bundleMenuItemId, Long childMenuItemId, int quantity, int displayOrder) {
-        this.bundleMenuItemId = bundleMenuItemId;
-        this.childMenuItemId = childMenuItemId;
-        this.quantity = quantity;
-        this.displayOrder = displayOrder;
-    }
+	public BundleChildEntity(Long bundleMenuItemId, Long childMenuItemId, int quantity, int displayOrder) {
+		this.bundleMenuItemId = bundleMenuItemId;
+		this.childMenuItemId = childMenuItemId;
+		this.quantity = quantity;
+		this.displayOrder = displayOrder;
+	}
 
-    public Long getId() {
-        return id;
-    }
+	public Long getId() {
+		return id;
+	}
 
-    public Long getBundleMenuItemId() {
-        return bundleMenuItemId;
-    }
+	public Long getBundleMenuItemId() {
+		return bundleMenuItemId;
+	}
 
-    public Long getChildMenuItemId() {
-        return childMenuItemId;
-    }
+	public Long getChildMenuItemId() {
+		return childMenuItemId;
+	}
 
-    public int getQuantity() {
-        return quantity;
-    }
+	public int getQuantity() {
+		return quantity;
+	}
 
-    public int getDisplayOrder() {
-        return displayOrder;
-    }
+	public int getDisplayOrder() {
+		return displayOrder;
+	}
 }

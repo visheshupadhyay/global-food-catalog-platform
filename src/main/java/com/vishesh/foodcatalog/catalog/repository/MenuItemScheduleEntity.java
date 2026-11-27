@@ -16,71 +16,71 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "menu_item_schedule")
 public class MenuItemScheduleEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name = "menu_item_id", nullable = false)
-    private Long menuItemId;
+	@Column(name = "menu_item_id", nullable = false)
+	private Long menuItemId;
 
-    @Column(name = "outlet_id")
-    private Long outletId;
+	@Column(name = "outlet_id")
+	private Long outletId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 9)
-    private Weekday weekday;
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 9)
+	private Weekday weekday;
 
-    @Column(name = "start_time", nullable = false)
-    private LocalTime startTime;
+	@Column(name = "start_time", nullable = false)
+	private LocalTime startTime;
 
-    @Column(name = "end_time", nullable = false)
-    private LocalTime endTime;
+	@Column(name = "end_time", nullable = false)
+	private LocalTime endTime;
 
-    @Version
-    @Column(nullable = false)
-    private Long version;
+	@Version
+	@Column(nullable = false)
+	private Long version;
 
-    @Column(name = "schedule_version", nullable = false)
-    private Long scheduleVersion;
+	@Column(name = "schedule_version", nullable = false)
+	private Long scheduleVersion;
 
-    protected MenuItemScheduleEntity() {
-    }
+	protected MenuItemScheduleEntity() {
+	}
 
-    public MenuItemScheduleEntity(Long item, Long outlet, Weekday day, LocalTime start, LocalTime end) {
-        this(item, outlet, day, start, end, 0L);
-    }
+	public MenuItemScheduleEntity(Long item, Long outlet, Weekday day, LocalTime start, LocalTime end) {
+		this(item, outlet, day, start, end, 0L);
+	}
 
-    public MenuItemScheduleEntity(Long item, Long outlet, Weekday day, LocalTime start, LocalTime end, Long version) {
-        menuItemId = item;
-        outletId = outlet;
-        weekday = day;
-        startTime = start;
-        endTime = end;
-        this.version = 0L;
-        this.scheduleVersion = version;
-    }
+	public MenuItemScheduleEntity(Long item, Long outlet, Weekday day, LocalTime start, LocalTime end, Long version) {
+		menuItemId = item;
+		outletId = outlet;
+		weekday = day;
+		startTime = start;
+		endTime = end;
+		this.version = 0L;
+		this.scheduleVersion = version;
+	}
 
-    public Long getMenuItemId() {
-        return menuItemId;
-    }
+	public Long getMenuItemId() {
+		return menuItemId;
+	}
 
-    public Long getOutletId() {
-        return outletId;
-    }
+	public Long getOutletId() {
+		return outletId;
+	}
 
-    public Weekday getWeekday() {
-        return weekday;
-    }
+	public Weekday getWeekday() {
+		return weekday;
+	}
 
-    public LocalTime getStartTime() {
-        return startTime;
-    }
+	public LocalTime getStartTime() {
+		return startTime;
+	}
 
-    public LocalTime getEndTime() {
-        return endTime;
-    }
+	public LocalTime getEndTime() {
+		return endTime;
+	}
 
-    public Long getVersion() {
-        return scheduleVersion;
-    }
+	public Long getVersion() {
+		return scheduleVersion;
+	}
 }

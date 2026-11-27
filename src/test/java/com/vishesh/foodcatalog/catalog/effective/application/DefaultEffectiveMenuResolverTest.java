@@ -38,8 +38,8 @@ public class DefaultEffectiveMenuResolverTest {
 	@Test
 	void resolve_withPriceOverride_changesOnlyPrice() {
 		BaseMenuItemSnapshot baseItem = baseItem();
-		OutletOverrideSnapshot override = new OutletOverrideSnapshot(
-				MENU_ITEM_ID, BERLIN_OUTLET_ID, new BigDecimal("12.50"), null, null);
+		OutletOverrideSnapshot override = new OutletOverrideSnapshot(MENU_ITEM_ID, BERLIN_OUTLET_ID,
+				new BigDecimal("12.50"), null, null);
 
 		EffectiveMenuItem effectiveItem = resolver.resolve(baseItem, BERLIN_OUTLET_ID, override);
 
@@ -51,8 +51,7 @@ public class DefaultEffectiveMenuResolverTest {
 	@Test
 	void resolve_withAvailabilityOverride_changesOnlyAvailability() {
 		BaseMenuItemSnapshot baseItem = baseItem();
-		OutletOverrideSnapshot override = new OutletOverrideSnapshot(
-				MENU_ITEM_ID, BERLIN_OUTLET_ID, null, false, null);
+		OutletOverrideSnapshot override = new OutletOverrideSnapshot(MENU_ITEM_ID, BERLIN_OUTLET_ID, null, false, null);
 
 		EffectiveMenuItem effectiveItem = resolver.resolve(baseItem, BERLIN_OUTLET_ID, override);
 
@@ -64,8 +63,7 @@ public class DefaultEffectiveMenuResolverTest {
 	@Test
 	void resolve_withVisibilityOverride_changesOnlyVisibility() {
 		BaseMenuItemSnapshot baseItem = baseItem();
-		OutletOverrideSnapshot override = new OutletOverrideSnapshot(
-				MENU_ITEM_ID, BERLIN_OUTLET_ID, null, null, false);
+		OutletOverrideSnapshot override = new OutletOverrideSnapshot(MENU_ITEM_ID, BERLIN_OUTLET_ID, null, null, false);
 
 		EffectiveMenuItem effectiveItem = resolver.resolve(baseItem, BERLIN_OUTLET_ID, override);
 
@@ -77,8 +75,8 @@ public class DefaultEffectiveMenuResolverTest {
 	@Test
 	void resolve_withMultipleOverrides_appliesEachProvidedValue() {
 		BaseMenuItemSnapshot baseItem = baseItem();
-		OutletOverrideSnapshot override = new OutletOverrideSnapshot(
-				MENU_ITEM_ID, BERLIN_OUTLET_ID, new BigDecimal("11.75"), false, false);
+		OutletOverrideSnapshot override = new OutletOverrideSnapshot(MENU_ITEM_ID, BERLIN_OUTLET_ID,
+				new BigDecimal("11.75"), false, false);
 
 		EffectiveMenuItem effectiveItem = resolver.resolve(baseItem, BERLIN_OUTLET_ID, override);
 
@@ -90,8 +88,7 @@ public class DefaultEffectiveMenuResolverTest {
 	@Test
 	void resolve_withEmptyOverride_inheritsAllBaseValues() {
 		BaseMenuItemSnapshot baseItem = baseItem();
-		OutletOverrideSnapshot override = new OutletOverrideSnapshot(
-				MENU_ITEM_ID, BERLIN_OUTLET_ID, null, null, null);
+		OutletOverrideSnapshot override = new OutletOverrideSnapshot(MENU_ITEM_ID, BERLIN_OUTLET_ID, null, null, null);
 
 		EffectiveMenuItem effectiveItem = resolver.resolve(baseItem, BERLIN_OUTLET_ID, override);
 
@@ -102,15 +99,9 @@ public class DefaultEffectiveMenuResolverTest {
 
 	@Test
 	void resolve_whenBaseItemIsHidden_visibilityOverrideCannotMakeItVisible() {
-		BaseMenuItemSnapshot hiddenBaseItem = new BaseMenuItemSnapshot(
-				MENU_ITEM_ID,
-				"Classic Burger",
-				new BigDecimal("10.00"),
-				true,
-				false,
-				MenuItemStatus.ACTIVE);
-		OutletOverrideSnapshot override = new OutletOverrideSnapshot(
-				MENU_ITEM_ID, BERLIN_OUTLET_ID, null, null, true);
+		BaseMenuItemSnapshot hiddenBaseItem = new BaseMenuItemSnapshot(MENU_ITEM_ID, "Classic Burger",
+				new BigDecimal("10.00"), true, false, MenuItemStatus.ACTIVE);
+		OutletOverrideSnapshot override = new OutletOverrideSnapshot(MENU_ITEM_ID, BERLIN_OUTLET_ID, null, null, true);
 
 		EffectiveMenuItem effectiveItem = resolver.resolve(hiddenBaseItem, BERLIN_OUTLET_ID, override);
 
@@ -119,27 +110,25 @@ public class DefaultEffectiveMenuResolverTest {
 
 	@Test
 	void resolve_whenOverrideReferencesAnotherItem_rejectsRequest() {
-		OutletOverrideSnapshot override = new OutletOverrideSnapshot(
-				999L, BERLIN_OUTLET_ID, new BigDecimal("12.50"), null, null);
+		OutletOverrideSnapshot override = new OutletOverrideSnapshot(999L, BERLIN_OUTLET_ID, new BigDecimal("12.50"),
+				null, null);
 
-		assertThrows(IllegalArgumentException.class,
-				() -> resolver.resolve(baseItem(), BERLIN_OUTLET_ID, override));
+		assertThrows(IllegalArgumentException.class, () -> resolver.resolve(baseItem(), BERLIN_OUTLET_ID, override));
 	}
 
 	@Test
 	void resolve_whenOverrideReferencesAnotherOutlet_rejectsRequest() {
-		OutletOverrideSnapshot override = new OutletOverrideSnapshot(
-				MENU_ITEM_ID, 999L, new BigDecimal("12.50"), null, null);
+		OutletOverrideSnapshot override = new OutletOverrideSnapshot(MENU_ITEM_ID, 999L, new BigDecimal("12.50"), null,
+				null);
 
-		assertThrows(IllegalArgumentException.class,
-				() -> resolver.resolve(baseItem(), BERLIN_OUTLET_ID, override));
+		assertThrows(IllegalArgumentException.class, () -> resolver.resolve(baseItem(), BERLIN_OUTLET_ID, override));
 	}
 
-	@Test 
-	void resolve_afterOverrideIsRemoved_returnsBaseValue(){
+	@Test
+	void resolve_afterOverrideIsRemoved_returnsBaseValue() {
 		BaseMenuItemSnapshot baseItem = baseItem();
-		OutletOverrideSnapshot override = new OutletOverrideSnapshot(
-				MENU_ITEM_ID, BERLIN_OUTLET_ID, new BigDecimal("12.50"), null, null);
+		OutletOverrideSnapshot override = new OutletOverrideSnapshot(MENU_ITEM_ID, BERLIN_OUTLET_ID,
+				new BigDecimal("12.50"), null, null);
 		EffectiveMenuItem effectiveItem = resolver.resolve(baseItem, BERLIN_OUTLET_ID, override);
 		assertEquals(override.getPriceOverride(), effectiveItem.getPrice());
 
@@ -149,12 +138,7 @@ public class DefaultEffectiveMenuResolverTest {
 	}
 
 	private BaseMenuItemSnapshot baseItem() {
-		return new BaseMenuItemSnapshot(
-				MENU_ITEM_ID,
-				"Classic Burger",
-				new BigDecimal("10.00"),
-				true,
-				true,
+		return new BaseMenuItemSnapshot(MENU_ITEM_ID, "Classic Burger", new BigDecimal("10.00"), true, true,
 				MenuItemStatus.ACTIVE);
 	}
 }

@@ -11,236 +11,174 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 public class MenuGroupTest {
-    @Test
-    void createsDraftMenuGroupWithRequiredFields() {
-        String displayName = "BURGER-KING";
-        Long restaurantChainId = 10L;
-        MenuGroup menuGroup = new MenuGroup(restaurantChainId, displayName);
+	@Test
+	void createsDraftMenuGroupWithRequiredFields() {
+		String displayName = "BURGER-KING";
+		Long restaurantChainId = 10L;
+		MenuGroup menuGroup = new MenuGroup(restaurantChainId, displayName);
 
-        assertNotNull(menuGroup);
-        assertEquals(restaurantChainId, menuGroup.getRestaurantChainId());
-        assertEquals(displayName, menuGroup.getDisplayName());
-        assertEquals(ChainStatus.DRAFT, menuGroup.getStatus());
-        assertNotNull(menuGroup.getCreatedAt());
-        assertNotNull(menuGroup.getUpdatedAt());
-        assertEquals(menuGroup.getCreatedAt(), menuGroup.getUpdatedAt());
-        assertNull(menuGroup.getId());
-    }
+		assertNotNull(menuGroup);
+		assertEquals(restaurantChainId, menuGroup.getRestaurantChainId());
+		assertEquals(displayName, menuGroup.getDisplayName());
+		assertEquals(ChainStatus.DRAFT, menuGroup.getStatus());
+		assertNotNull(menuGroup.getCreatedAt());
+		assertNotNull(menuGroup.getUpdatedAt());
+		assertEquals(menuGroup.getCreatedAt(), menuGroup.getUpdatedAt());
+		assertNull(menuGroup.getId());
+	}
 
-    @Test
-    void rejectsBlankDisplayName() {
-        String displayName = "  ";
-        Long restaurantChainId = 10L;
-        Instant expectedCreatedAt = Instant.parse("2026-01-01T10:00:00Z");
-        Instant expectedUpdatedAt = Instant.parse("2026-01-02T10:00:00Z");
-        
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(restaurantChainId, displayName));
-        
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(restaurantChainId,
-                        displayName,
-                        ChainStatus.ACTIVE,
-                        expectedCreatedAt,
-                        expectedUpdatedAt,
-                        3L,
-                        201L));
-    }
+	@Test
+	void rejectsBlankDisplayName() {
+		String displayName = "  ";
+		Long restaurantChainId = 10L;
+		Instant expectedCreatedAt = Instant.parse("2026-01-01T10:00:00Z");
+		Instant expectedUpdatedAt = Instant.parse("2026-01-02T10:00:00Z");
 
-    @Test
-    void rejectsNullInputs() {
-        Long restaurantChainId = 10L;
-        Instant expectedCreatedAt = Instant.parse("2026-01-01T10:00:00Z");
-        Instant expectedUpdatedAt = Instant.parse("2026-01-02T10:00:00Z");
-        String displayName = "Burgers";
-        ChainStatus status = ChainStatus.ACTIVE;
-        Long menuGroupId = 201L;
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(restaurantChainId, null));
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(null, "BURGER-KING"));
+		assertThrows(IllegalArgumentException.class, () -> new MenuGroup(restaurantChainId, displayName));
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(restaurantChainId,
-                        displayName,
-                        null,
-                        expectedCreatedAt,
-                        expectedUpdatedAt,
-                        3L,
-                        menuGroupId));
+		assertThrows(IllegalArgumentException.class, () -> new MenuGroup(restaurantChainId, displayName,
+				ChainStatus.ACTIVE, expectedCreatedAt, expectedUpdatedAt, 3L, 201L));
+	}
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(restaurantChainId,
-                        displayName,
-                        status,
-                        null,
-                        expectedUpdatedAt,
-                        3L,
-                        menuGroupId));
+	@Test
+	void rejectsNullInputs() {
+		Long restaurantChainId = 10L;
+		Instant expectedCreatedAt = Instant.parse("2026-01-01T10:00:00Z");
+		Instant expectedUpdatedAt = Instant.parse("2026-01-02T10:00:00Z");
+		String displayName = "Burgers";
+		ChainStatus status = ChainStatus.ACTIVE;
+		Long menuGroupId = 201L;
+		assertThrows(IllegalArgumentException.class, () -> new MenuGroup(restaurantChainId, null));
+		assertThrows(IllegalArgumentException.class, () -> new MenuGroup(null, "BURGER-KING"));
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(restaurantChainId,
-                        displayName,
-                        status,
-                        expectedCreatedAt,
-                        null,
-                        3L,
-                        menuGroupId));
+		assertThrows(IllegalArgumentException.class, () -> new MenuGroup(restaurantChainId, displayName, null,
+				expectedCreatedAt, expectedUpdatedAt, 3L, menuGroupId));
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(restaurantChainId,
-                        displayName,
-                        status,
-                        expectedCreatedAt,
-                        expectedUpdatedAt,
-                        3L,
-                        null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new MenuGroup(restaurantChainId, displayName, status, null, expectedUpdatedAt, 3L, menuGroupId));
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(restaurantChainId,
-                        null,
-                        status,
-                        expectedCreatedAt,
-                        expectedUpdatedAt,
-                        3L,
-                        -1L));
-    }
+		assertThrows(IllegalArgumentException.class,
+				() -> new MenuGroup(restaurantChainId, displayName, status, expectedCreatedAt, null, 3L, menuGroupId));
 
-    @Test
-    void rejectsZeroOrNegativeChainIdInputs() {
-        Long restaurantChainId = 10L;
-        Instant expectedCreatedAt = Instant.parse("2026-01-01T10:00:00Z");
-        Instant expectedUpdatedAt = Instant.parse("2026-01-02T10:00:00Z");
-        String displayName = "Burgers";
-        ChainStatus status = ChainStatus.ACTIVE;
+		assertThrows(IllegalArgumentException.class, () -> new MenuGroup(restaurantChainId, displayName, status,
+				expectedCreatedAt, expectedUpdatedAt, 3L, null));
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(0L, "BURGER-KING"));
+		assertThrows(IllegalArgumentException.class,
+				() -> new MenuGroup(restaurantChainId, null, status, expectedCreatedAt, expectedUpdatedAt, 3L, -1L));
+	}
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(-1L, "BURGER-KING"));
+	@Test
+	void rejectsZeroOrNegativeChainIdInputs() {
+		Long restaurantChainId = 10L;
+		Instant expectedCreatedAt = Instant.parse("2026-01-01T10:00:00Z");
+		Instant expectedUpdatedAt = Instant.parse("2026-01-02T10:00:00Z");
+		String displayName = "Burgers";
+		ChainStatus status = ChainStatus.ACTIVE;
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(restaurantChainId,
-                        displayName,
-                        status,
-                        expectedCreatedAt,
-                        expectedUpdatedAt,
-                        3L,
-                        0L));
+		assertThrows(IllegalArgumentException.class, () -> new MenuGroup(0L, "BURGER-KING"));
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new MenuGroup(restaurantChainId,
-                        displayName,
-                        status,
-                        expectedCreatedAt,
-                        expectedUpdatedAt,
-                        3L,
-                        -1L));
-    }
+		assertThrows(IllegalArgumentException.class, () -> new MenuGroup(-1L, "BURGER-KING"));
 
-    @Test
-    void trimsValues() {
-        Long restaurantChainId = 10L;
-        MenuGroup menuGroup = new MenuGroup(restaurantChainId,
-                "  BURGER-KING  ");
+		assertThrows(IllegalArgumentException.class, () -> new MenuGroup(restaurantChainId, displayName, status,
+				expectedCreatedAt, expectedUpdatedAt, 3L, 0L));
 
-        assertEquals("BURGER-KING", menuGroup.getDisplayName());
-    }
+		assertThrows(IllegalArgumentException.class, () -> new MenuGroup(restaurantChainId, displayName, status,
+				expectedCreatedAt, expectedUpdatedAt, 3L, -1L));
+	}
 
-    @Test
-    void updatesTimestampWhenStatusChanges() {
-        Long restaurantChainId = 10L;
-        String displayName = "BURGER-KING";
-        MenuGroup menuGroup = new MenuGroup(restaurantChainId, displayName);
-        Instant originalUpdatedAt = menuGroup.getUpdatedAt();
-        menuGroup.changeStatusTo(ChainStatus.ACTIVE);
+	@Test
+	void trimsValues() {
+		Long restaurantChainId = 10L;
+		MenuGroup menuGroup = new MenuGroup(restaurantChainId, "  BURGER-KING  ");
 
-        assertEquals(ChainStatus.ACTIVE, menuGroup.getStatus());
-        assertFalse(menuGroup.getUpdatedAt().isBefore(originalUpdatedAt));
-    }
+		assertEquals("BURGER-KING", menuGroup.getDisplayName());
+	}
 
-    @Test
-    void rejectsNullStatus() {
-        Long restaurantChainId = 10L;
-        MenuGroup menuGroup = new MenuGroup(restaurantChainId, "BURGER-KING");
+	@Test
+	void updatesTimestampWhenStatusChanges() {
+		Long restaurantChainId = 10L;
+		String displayName = "BURGER-KING";
+		MenuGroup menuGroup = new MenuGroup(restaurantChainId, displayName);
+		Instant originalUpdatedAt = menuGroup.getUpdatedAt();
+		menuGroup.changeStatusTo(ChainStatus.ACTIVE);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> menuGroup.changeStatusTo(null));
-    }
+		assertEquals(ChainStatus.ACTIVE, menuGroup.getStatus());
+		assertFalse(menuGroup.getUpdatedAt().isBefore(originalUpdatedAt));
+	}
 
-    @Test
-    void allowsOnlyForwardLifecycleTransitions() {
-        Long restaurantChainId = 10L;
-        MenuGroup menuGroup = new MenuGroup(restaurantChainId, "BURGER-KING");
+	@Test
+	void rejectsNullStatus() {
+		Long restaurantChainId = 10L;
+		MenuGroup menuGroup = new MenuGroup(restaurantChainId, "BURGER-KING");
 
-        menuGroup.changeStatusTo(ChainStatus.ACTIVE);
-        menuGroup.changeStatusTo(ChainStatus.ARCHIVED);
+		assertThrows(IllegalArgumentException.class, () -> menuGroup.changeStatusTo(null));
+	}
 
-        assertEquals(ChainStatus.ARCHIVED, menuGroup.getStatus());
-    }
+	@Test
+	void allowsOnlyForwardLifecycleTransitions() {
+		Long restaurantChainId = 10L;
+		MenuGroup menuGroup = new MenuGroup(restaurantChainId, "BURGER-KING");
 
-    @Test
-    void rejectsSkippingLifecycleStates() {
-        Long restaurantChainId = 10L;
-        MenuGroup menuGroup = new MenuGroup(restaurantChainId, "BURGER-KING");
+		menuGroup.changeStatusTo(ChainStatus.ACTIVE);
+		menuGroup.changeStatusTo(ChainStatus.ARCHIVED);
 
-        assertThrows(IllegalStateException.class,
-                () -> menuGroup.changeStatusTo(ChainStatus.ARCHIVED));
-    }
+		assertEquals(ChainStatus.ARCHIVED, menuGroup.getStatus());
+	}
 
-    @Test
-    void requiresExplicitRestoreForArchivedChain() {
-        Long restaurantChainId = 10L;
-        MenuGroup menuGroup = new MenuGroup(restaurantChainId, "BURGER-KING");
+	@Test
+	void rejectsSkippingLifecycleStates() {
+		Long restaurantChainId = 10L;
+		MenuGroup menuGroup = new MenuGroup(restaurantChainId, "BURGER-KING");
 
-        menuGroup.changeStatusTo(ChainStatus.ACTIVE);
-        menuGroup.changeStatusTo(ChainStatus.ARCHIVED);
+		assertThrows(IllegalStateException.class, () -> menuGroup.changeStatusTo(ChainStatus.ARCHIVED));
+	}
 
-        assertThrows(IllegalStateException.class,
-                () -> menuGroup.changeStatusTo(ChainStatus.ACTIVE));
+	@Test
+	void requiresExplicitRestoreForArchivedChain() {
+		Long restaurantChainId = 10L;
+		MenuGroup menuGroup = new MenuGroup(restaurantChainId, "BURGER-KING");
 
-        menuGroup.restoreFromArchive();
+		menuGroup.changeStatusTo(ChainStatus.ACTIVE);
+		menuGroup.changeStatusTo(ChainStatus.ARCHIVED);
 
-        assertEquals(ChainStatus.ACTIVE, menuGroup.getStatus());
-    }
+		assertThrows(IllegalStateException.class, () -> menuGroup.changeStatusTo(ChainStatus.ACTIVE));
 
-    @Test
-    void restoringNonArchivedMenuGroupIsRejected() {
-        Long restaurantChainId = 10L;
-        MenuGroup menuGroup = new MenuGroup(restaurantChainId, "BURGER-KING");
+		menuGroup.restoreFromArchive();
 
-        assertThrows(IllegalStateException.class, menuGroup::restoreFromArchive);
-    }
+		assertEquals(ChainStatus.ACTIVE, menuGroup.getStatus());
+	}
 
-    @Test
-    void changingToCurrentStatusDoesNotUpdateTimestamp() {
-        Long restaurantChainId = 10L;
-        MenuGroup menuGroup = new MenuGroup(restaurantChainId, "BURGER-KING");
-        Instant lastUpdated = menuGroup.getUpdatedAt();
-        menuGroup.changeStatusTo(ChainStatus.DRAFT);
-        Instant currentUpdated = menuGroup.getUpdatedAt();
+	@Test
+	void restoringNonArchivedMenuGroupIsRejected() {
+		Long restaurantChainId = 10L;
+		MenuGroup menuGroup = new MenuGroup(restaurantChainId, "BURGER-KING");
 
-        assertEquals(lastUpdated, currentUpdated);
-    }
+		assertThrows(IllegalStateException.class, menuGroup::restoreFromArchive);
+	}
 
-    @Test
-    void rehydratesExistingMenuGroupWithPersistedFields() {
-        Instant expectedCreatedAt = Instant.parse("2026-01-01T10:00:00Z");
-        Instant expectedUpdatedAt = Instant.parse("2026-01-02T10:00:00Z");
+	@Test
+	void changingToCurrentStatusDoesNotUpdateTimestamp() {
+		Long restaurantChainId = 10L;
+		MenuGroup menuGroup = new MenuGroup(restaurantChainId, "BURGER-KING");
+		Instant lastUpdated = menuGroup.getUpdatedAt();
+		menuGroup.changeStatusTo(ChainStatus.DRAFT);
+		Instant currentUpdated = menuGroup.getUpdatedAt();
 
-        MenuGroup menuGroup = new MenuGroup(42L,
-                "  Burgers  ",
-                ChainStatus.ACTIVE,
-                expectedCreatedAt,
-                expectedUpdatedAt,
-                3L,
-                201L);
-        assertEquals(201L, menuGroup.getId());
-        assertEquals("Burgers", menuGroup.getDisplayName());
-        assertEquals(ChainStatus.ACTIVE, menuGroup.getStatus());
-        assertEquals(expectedCreatedAt, menuGroup.getCreatedAt());
-        assertEquals(expectedUpdatedAt, menuGroup.getUpdatedAt());
-        assertEquals(42L, menuGroup.getRestaurantChainId());
-    }
+		assertEquals(lastUpdated, currentUpdated);
+	}
+
+	@Test
+	void rehydratesExistingMenuGroupWithPersistedFields() {
+		Instant expectedCreatedAt = Instant.parse("2026-01-01T10:00:00Z");
+		Instant expectedUpdatedAt = Instant.parse("2026-01-02T10:00:00Z");
+
+		MenuGroup menuGroup = new MenuGroup(42L, "  Burgers  ", ChainStatus.ACTIVE, expectedCreatedAt,
+				expectedUpdatedAt, 3L, 201L);
+		assertEquals(201L, menuGroup.getId());
+		assertEquals("Burgers", menuGroup.getDisplayName());
+		assertEquals(ChainStatus.ACTIVE, menuGroup.getStatus());
+		assertEquals(expectedCreatedAt, menuGroup.getCreatedAt());
+		assertEquals(expectedUpdatedAt, menuGroup.getUpdatedAt());
+		assertEquals(42L, menuGroup.getRestaurantChainId());
+	}
 }

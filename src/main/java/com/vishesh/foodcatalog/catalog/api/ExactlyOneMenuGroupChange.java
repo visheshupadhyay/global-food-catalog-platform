@@ -14,9 +14,11 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Documented
 @Constraint(validatedBy = ExactlyOneMenuGroupChangeValidator.class)
 @Retention(RUNTIME)
-@Target({ TYPE, ANNOTATION_TYPE })
+@Target({TYPE, ANNOTATION_TYPE})
 public @interface ExactlyOneMenuGroupChange {
-    String message() default "Exactly one of displayName or status must be supplied";
-    Class<?>[] groups() default {};
-    Class<? extends Payload>[] payload() default {};
+	String message() default "Exactly one of displayName or status must be supplied";
+
+	Class<?>[] groups() default {};
+
+	Class<? extends Payload>[] payload() default {};
 }

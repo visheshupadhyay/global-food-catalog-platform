@@ -11,27 +11,27 @@ import com.vishesh.foodcatalog.catalog.application.MenuItemSeasonalAvailabilityS
 @RestController
 @RequestMapping("/api/v1/menu-items/{menuItemId}/seasonal-availability")
 public class MenuItemSeasonalAvailabilityController {
-    private final MenuItemSeasonalAvailabilityService service;
+	private final MenuItemSeasonalAvailabilityService service;
 
-    public MenuItemSeasonalAvailabilityController(MenuItemSeasonalAvailabilityService service) {
-        this.service = service;
-    }
+	public MenuItemSeasonalAvailabilityController(MenuItemSeasonalAvailabilityService service) {
+		this.service = service;
+	}
 
-    @PutMapping
-    public Object replace(@PathVariable Long menuItemId, @RequestBody SeasonalAvailabilityRequest request) {
-        return service.save(menuItemId, request);
-    }
+	@PutMapping
+	public Object replace(@PathVariable Long menuItemId, @RequestBody SeasonalAvailabilityRequest request) {
+		return service.save(menuItemId, request);
+	}
 
-    @DeleteMapping
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void clear(@PathVariable Long menuItemId, @RequestParam(required = false) Long outletId,
-            @RequestParam(required = false) Long expectedVersion) {
-        service.save(menuItemId, new SeasonalAvailabilityRequest(outletId, null, null, expectedVersion));
-    }
+	@DeleteMapping
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void clear(@PathVariable Long menuItemId, @RequestParam(required = false) Long outletId,
+			@RequestParam(required = false) Long expectedVersion) {
+		service.save(menuItemId, new SeasonalAvailabilityRequest(outletId, null, null, expectedVersion));
+	}
 
-    @GetMapping
-    public Object get(@PathVariable Long menuItemId, @RequestParam(required = false) Long outletId) {
-        return service.find(menuItemId, outletId)
-                .orElseThrow(() -> new IllegalArgumentException("Seasonal availability was not found"));
-    }
+	@GetMapping
+	public Object get(@PathVariable Long menuItemId, @RequestParam(required = false) Long outletId) {
+		return service.find(menuItemId, outletId)
+				.orElseThrow(() -> new IllegalArgumentException("Seasonal availability was not found"));
+	}
 }

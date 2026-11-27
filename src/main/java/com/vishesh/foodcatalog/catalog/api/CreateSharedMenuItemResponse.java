@@ -9,17 +9,7 @@ import com.vishesh.foodcatalog.catalog.domain.MenuItemKind;
 /**
  * CreateSharedMenuItemResponse
  */
-public record CreateSharedMenuItemResponse(Long id,
-        String businessCode,
-        String itemName,
-        BigDecimal itemPrice,
-        Long restaurantChainId,
-        MenuItemStatus status,
-        Long version,
-        Instant createdAt,
-        Instant updatedAt,
-        Long outletId,
-        Long menuGroupId,
-        Long menuCategoryId,
-        MenuItemKind menuItemKind) {
+public record CreateSharedMenuItemResponse(Long id, String businessCode, String itemName, BigDecimal itemPrice,
+		Long restaurantChainId, MenuItemStatus status, Long version, Instant createdAt, Instant updatedAt,
+		Long outletId, Long menuGroupId, Long menuCategoryId, MenuItemKind menuItemKind) {
 }

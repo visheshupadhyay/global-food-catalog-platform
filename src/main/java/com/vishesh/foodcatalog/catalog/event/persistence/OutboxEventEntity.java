@@ -24,212 +24,211 @@ import jakarta.persistence.Table;
 /** JPA row containing the event payload and its delivery/retry state. */
 public class OutboxEventEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    /* V1 requires this legacy column; populate it from the event type temporarily. */
-    @Column(name = "name", nullable = false)
-    private String name;
+	/*
+	 * V1 requires this legacy column; populate it from the event type temporarily.
+	 */
+	@Column(name = "name", nullable = false)
+	private String name;
 
-    /* Legacy ownership columns remain nullable during the transition. */
-    @Column(name = "menu_group_id")
-    private Long menuGroupId;
+	/* Legacy ownership columns remain nullable during the transition. */
+	@Column(name = "menu_group_id")
+	private Long menuGroupId;
 
-    @Column(name = "outlet_id")
-    private Long outletId;
+	@Column(name = "outlet_id")
+	private Long outletId;
 
-    @Column(name = "event_id")
-    private UUID eventId;
+	@Column(name = "event_id")
+	private UUID eventId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "event_type")
-    private OutboxEventType eventType;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "event_type")
+	private OutboxEventType eventType;
 
-    @Column(name = "kafka_key")
-    private String kafkaKey;
+	@Column(name = "kafka_key")
+	private String kafkaKey;
 
-    @Column(name = "aggregate_id")
-    private Long aggregateId;
+	@Column(name = "aggregate_id")
+	private Long aggregateId;
 
-    @Column(name = "aggregate_version")
-    private Long aggregateVersion;
+	@Column(name = "aggregate_version")
+	private Long aggregateVersion;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "payload", columnDefinition = "jsonb")
-    private String payload;
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "payload", columnDefinition = "jsonb")
+	private String payload;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status")
-    private OutboxEventStatus status;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "status")
+	private OutboxEventStatus status;
 
-    @Column(name = "retry_count")
-    private Long retryCount;
+	@Column(name = "retry_count")
+	private Long retryCount;
 
-    @Column(name = "next_attempt_at")
-    private Instant nextRetryTime;
+	@Column(name = "next_attempt_at")
+	private Instant nextRetryTime;
 
-    @Column(name = "last_error")
-    private String lastErrorMessage;
+	@Column(name = "last_error")
+	private String lastErrorMessage;
 
-    @Column(name = "created_at")
-    private Instant createdTimestamp;
+	@Column(name = "created_at")
+	private Instant createdTimestamp;
 
-    @Column(name = "published_at")
-    private Instant publishedTimestamp;
+	@Column(name = "published_at")
+	private Instant publishedTimestamp;
 
-    @Column(name = "failed_at")
-    private Instant failedTimestamp;
+	@Column(name = "failed_at")
+	private Instant failedTimestamp;
 
-    @Column(name = "original_event_id")
-    private UUID originalEventId;
+	@Column(name = "original_event_id")
+	private UUID originalEventId;
 
-    @Column(name = "processing_started_at")
-    private Instant processingStartedAt;
+	@Column(name = "processing_started_at")
+	private Instant processingStartedAt;
 
-    protected OutboxEventEntity() {
-        // Required by JPA.
-    }
+	protected OutboxEventEntity() {
+		// Required by JPA.
+	}
 
-    public OutboxEventEntity(Long id, UUID eventId, String payload, Instant createdTimestamp,
-            Instant publishedTimestamp, Instant failedTimestamp,
-            UUID originalEventId, OutboxEventType eventType,
-            String kafkaKey, Long aggregateId, Long aggregateVersion,
-            OutboxEventStatus status, Long retryCount,
-            Instant nextRetryTime, String lastErrorMessage, Instant processingStartedAt) {
+	public OutboxEventEntity(Long id, UUID eventId, String payload, Instant createdTimestamp,
+			Instant publishedTimestamp, Instant failedTimestamp, UUID originalEventId, OutboxEventType eventType,
+			String kafkaKey, Long aggregateId, Long aggregateVersion, OutboxEventStatus status, Long retryCount,
+			Instant nextRetryTime, String lastErrorMessage, Instant processingStartedAt) {
 
-        this.id = id;
-        this.name = eventType == null ? null : eventType.name();
-        this.eventId = eventId;
-        this.payload = payload;
-        this.createdTimestamp = createdTimestamp;
-        this.publishedTimestamp = publishedTimestamp;
-        this.failedTimestamp = failedTimestamp;
-        this.originalEventId = originalEventId;
-        this.eventType = eventType;
-        this.kafkaKey = kafkaKey;
-        this.aggregateId = aggregateId;
-        this.aggregateVersion = aggregateVersion;
-        this.status = status;
-        this.retryCount = retryCount;
-        this.nextRetryTime = nextRetryTime;
-        this.lastErrorMessage = lastErrorMessage;
-        this.processingStartedAt = processingStartedAt;
-    }
+		this.id = id;
+		this.name = eventType == null ? null : eventType.name();
+		this.eventId = eventId;
+		this.payload = payload;
+		this.createdTimestamp = createdTimestamp;
+		this.publishedTimestamp = publishedTimestamp;
+		this.failedTimestamp = failedTimestamp;
+		this.originalEventId = originalEventId;
+		this.eventType = eventType;
+		this.kafkaKey = kafkaKey;
+		this.aggregateId = aggregateId;
+		this.aggregateVersion = aggregateVersion;
+		this.status = status;
+		this.retryCount = retryCount;
+		this.nextRetryTime = nextRetryTime;
+		this.lastErrorMessage = lastErrorMessage;
+		this.processingStartedAt = processingStartedAt;
+	}
 
-    /** Backward-compatible constructor for existing persistence tests and callers. */
-    public OutboxEventEntity(Long id, UUID eventId, String payload, Instant createdTimestamp,
-            Instant publishedTimestamp, Instant failedTimestamp, UUID originalEventId,
-            OutboxEventType eventType, String kafkaKey, Long aggregateId, Long aggregateVersion,
-            OutboxEventStatus status, Long retryCount, Instant nextRetryTime, String lastErrorMessage) {
-        this(id, eventId, payload, createdTimestamp, publishedTimestamp, failedTimestamp, originalEventId,
-                eventType, kafkaKey, aggregateId, aggregateVersion, status, retryCount, nextRetryTime,
-                lastErrorMessage, null);
-    }
+	/**
+	 * Backward-compatible constructor for existing persistence tests and callers.
+	 */
+	public OutboxEventEntity(Long id, UUID eventId, String payload, Instant createdTimestamp,
+			Instant publishedTimestamp, Instant failedTimestamp, UUID originalEventId, OutboxEventType eventType,
+			String kafkaKey, Long aggregateId, Long aggregateVersion, OutboxEventStatus status, Long retryCount,
+			Instant nextRetryTime, String lastErrorMessage) {
+		this(id, eventId, payload, createdTimestamp, publishedTimestamp, failedTimestamp, originalEventId, eventType,
+				kafkaKey, aggregateId, aggregateVersion, status, retryCount, nextRetryTime, lastErrorMessage, null);
+	}
 
+	public Long getId() {
+		return id;
+	}
 
+	public String getName() {
+		return name;
+	}
 
-    public Long getId() {
-        return id;
-    }
+	public Long getMenuGroupId() {
+		return menuGroupId;
+	}
 
-    public String getName() {
-        return name;
-    }
+	public Long getOutletId() {
+		return outletId;
+	}
 
-    public Long getMenuGroupId() {
-        return menuGroupId;
-    }
+	public UUID getEventId() {
+		return eventId;
+	}
 
-    public Long getOutletId() {
-        return outletId;
-    }
+	public OutboxEventType getEventType() {
+		return eventType;
+	}
 
-    public UUID getEventId() {
-        return eventId;
-    }
+	public String getKafkaKey() {
+		return kafkaKey;
+	}
 
-    public OutboxEventType getEventType() {
-        return eventType;
-    }
+	public Long getAggregateId() {
+		return aggregateId;
+	}
 
-    public String getKafkaKey() {
-        return kafkaKey;
-    }
+	public Long getAggregateVersion() {
+		return aggregateVersion;
+	}
 
-    public Long getAggregateId() {
-        return aggregateId;
-    }
+	public String getPayload() {
+		return payload;
+	}
 
-    public Long getAggregateVersion() {
-        return aggregateVersion;
-    }
+	public OutboxEventStatus getStatus() {
+		return status;
+	}
 
-    public String getPayload() {
-        return payload;
-    }
+	public Long getRetryCount() {
+		return retryCount;
+	}
 
-    public OutboxEventStatus getStatus() {
-        return status;
-    }
+	public Instant getNextRetryTime() {
+		return nextRetryTime;
+	}
 
-    public Long getRetryCount() {
-        return retryCount;
-    }
+	public String getLastErrorMessage() {
+		return lastErrorMessage;
+	}
 
-    public Instant getNextRetryTime() {
-        return nextRetryTime;
-    }
+	public Instant getCreatedTimestamp() {
+		return createdTimestamp;
+	}
 
-    public String getLastErrorMessage() {
-        return lastErrorMessage;
-    }
+	public Instant getPublishedTimestamp() {
+		return publishedTimestamp;
+	}
 
-    public Instant getCreatedTimestamp() {
-        return createdTimestamp;
-    }
+	public Instant getFailedTimestamp() {
+		return failedTimestamp;
+	}
 
-    public Instant getPublishedTimestamp() {
-        return publishedTimestamp;
-    }
+	public UUID getOriginalEventId() {
+		return originalEventId;
+	}
 
-    public Instant getFailedTimestamp() {
-        return failedTimestamp;
-    }
+	public Instant getProcessingStartedAt() {
+		return processingStartedAt;
+	}
 
-    public UUID getOriginalEventId() {
-        return originalEventId;
-    }
+	public void setProcessingStartedAt(Instant processingStartedAt) {
+		this.processingStartedAt = processingStartedAt;
+	}
 
-    public Instant getProcessingStartedAt() {
-        return processingStartedAt;
-    }
+	public void setStatus(OutboxEventStatus status) {
+		this.status = status;
+	}
 
-    public void setProcessingStartedAt(Instant processingStartedAt) {
-        this.processingStartedAt = processingStartedAt;
-    }
+	public void setRetryCount(Long retryCount) {
+		this.retryCount = retryCount;
+	}
 
-    public void setStatus(OutboxEventStatus status) {
-        this.status = status;
-    }
+	public void setNextRetryTime(Instant nextRetryTime) {
+		this.nextRetryTime = nextRetryTime;
+	}
 
-    public void setRetryCount(Long retryCount) {
-        this.retryCount = retryCount;
-    }
+	public void setLastErrorMessage(String lastErrorMessage) {
+		this.lastErrorMessage = lastErrorMessage;
+	}
 
-    public void setNextRetryTime(Instant nextRetryTime) {
-        this.nextRetryTime = nextRetryTime;
-    }
+	public void setPublishedTimestamp(Instant publishedTimestamp) {
+		this.publishedTimestamp = publishedTimestamp;
+	}
 
-    public void setLastErrorMessage(String lastErrorMessage) {
-        this.lastErrorMessage = lastErrorMessage;
-    }
-
-    public void setPublishedTimestamp(Instant publishedTimestamp) {
-        this.publishedTimestamp = publishedTimestamp;
-    }
-
-    public void setFailedTimestamp(Instant failedTimestamp) {
-        this.failedTimestamp = failedTimestamp;
-    }
+	public void setFailedTimestamp(Instant failedTimestamp) {
+		this.failedTimestamp = failedTimestamp;
+	}
 }

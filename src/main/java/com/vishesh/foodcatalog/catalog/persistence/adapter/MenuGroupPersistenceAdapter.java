@@ -13,43 +13,39 @@ import com.vishesh.foodcatalog.catalog.persistence.mapper.MenuGroupMapper;
 import com.vishesh.foodcatalog.catalog.persistence.repository.MenuGroupJpaRepository;
 import com.vishesh.foodcatalog.catalog.repository.MenuGroupRepository;
 
-/** Converts menu groups and sends them to the menu-group database repository. */
-@Repository 
+/**
+ * Converts menu groups and sends them to the menu-group database repository.
+ */
+@Repository
 public class MenuGroupPersistenceAdapter implements MenuGroupRepository {
-    private final MenuGroupJpaRepository repository;
-    private final MenuGroupMapper mapper;
+	private final MenuGroupJpaRepository repository;
+	private final MenuGroupMapper mapper;
 
-    public MenuGroupPersistenceAdapter(MenuGroupJpaRepository repository,
-            MenuGroupMapper mapper) {
+	public MenuGroupPersistenceAdapter(MenuGroupJpaRepository repository, MenuGroupMapper mapper) {
 
-        this.repository = repository;
-        this.mapper = mapper;
-    }
+		this.repository = repository;
+		this.mapper = mapper;
+	}
 
-    @Override
-    public MenuGroup save(MenuGroup chain) {
-        // JPA saves the entity and may add the generated database ID.
-        MenuGroupEntity entity = mapper.toEntity(chain);
+	@Override
+	public MenuGroup save(MenuGroup menuGroup) {
+		// JPA saves the entity and may add the generated database ID.
+		MenuGroupEntity entity = mapper.toEntity(menuGroup);
+		return mapper.toDomain(repository.save(entity));
+	}
 
-        MenuGroupEntity savedEntity = repository.save(entity);
+	@Override
+	public boolean existsNonArchivedByRestaurantChainIdAndDisplayName(Long restaurantChainId, String displayName) {
+		String normalizedDisplayName = displayName.trim().toLowerCase(Locale.ROOT);
 
-        return mapper.toDomain(savedEntity);
-    }
+		List<ChainStatus> workingStatuses = List.of(ChainStatus.DRAFT, ChainStatus.ACTIVE);
 
-    @Override
-    public boolean existsNonArchivedByRestaurantChainIdAndDisplayName(Long restaurantChainId, String displayName) {
-        String normalizedDisplayName = displayName.trim().toLowerCase(Locale.ROOT);
+		return repository.existsByRestaurantChainIdAndNormalizedDisplayNameAndStatusIn(restaurantChainId,
+				normalizedDisplayName, workingStatuses);
+	}
 
-        List<ChainStatus> workingStatuses = List.of(ChainStatus.DRAFT, ChainStatus.ACTIVE);
-
-        return repository.existsByRestaurantChainIdAndNormalizedDisplayNameAndStatusIn(
-                restaurantChainId,
-                normalizedDisplayName,
-                workingStatuses);
-    }
-
-    @Override
-    public Optional<MenuGroup> findByIdAndRestaurantChainId(Long menuGroupId, Long restaurantChainId) {
-        return repository.findByIdAndRestaurantChainId(menuGroupId,restaurantChainId).map(mapper::toDomain);
-    }
+	@Override
+	public Optional<MenuGroup> findByIdAndRestaurantChainId(Long menuGroupId, Long restaurantChainId) {
+		return repository.findByIdAndRestaurantChainId(menuGroupId, restaurantChainId).map(mapper::toDomain);
+	}
 }

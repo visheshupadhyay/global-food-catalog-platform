@@ -1,6 +1,5 @@
 package com.vishesh.foodcatalog.catalog.effective.persistence;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,72 +21,59 @@ import com.vishesh.foodcatalog.catalog.effective.persistence.repository.Effectiv
 @Component("postgresEffectiveMenuDataProvider")
 /** Reads only the small set of rows needed to calculate one outlet's menu. */
 public class PostgresEffectiveMenuDataProvider implements EffectiveMenuDataProvider {
-    private final EffectiveMenuJpaReadRepository effectiveMenuJpaReadRepository;
+	private final EffectiveMenuJpaReadRepository effectiveMenuJpaReadRepository;
 
-    public PostgresEffectiveMenuDataProvider(EffectiveMenuJpaReadRepository effectiveMenuJpaReadRepository) {
-        this.effectiveMenuJpaReadRepository = effectiveMenuJpaReadRepository;
-    }
+	public PostgresEffectiveMenuDataProvider(EffectiveMenuJpaReadRepository effectiveMenuJpaReadRepository) {
+		this.effectiveMenuJpaReadRepository = effectiveMenuJpaReadRepository;
+	}
 
-    @Override
-    public Optional<EffectiveMenuSourceData> findByOutletId(Long outletId) {
-        if (outletId == null || outletId <= 0) {
-            throw new IllegalArgumentException("Outlet not found");
-        }
+	@Override
+	public Optional<EffectiveMenuSourceData> findByOutletId(Long outletId) {
+		if (outletId == null || outletId <= 0) {
+			throw new IllegalArgumentException("Outlet not found");
+		}
 
-        Optional<OutletStatusProjection> localMenuItemProjections = effectiveMenuJpaReadRepository
-                .findOutletStatusByOutletId(outletId);
+		Optional<OutletStatusProjection> outletStatusProjection = effectiveMenuJpaReadRepository
+				.findOutletStatusByOutletId(outletId);
 
-        if (localMenuItemProjections.isEmpty()) {
-            // No outlet row means the outlet does not exist.
-            return Optional.empty();
-        }
+		if (outletStatusProjection.isEmpty()) {
+			// No outlet row means the outlet does not exist.
+			return Optional.empty();
+		}
 
-        List<BaseMenuItemProjection> baseMenuProjection = effectiveMenuJpaReadRepository
-                .findBaseItemsByOutletId(outletId);
+		List<BaseMenuItemProjection> baseMenuItemProjections = effectiveMenuJpaReadRepository
+				.findBaseItemsByOutletId(outletId);
 
-        List<OutletOverrideProjection> localOverridesProjection = effectiveMenuJpaReadRepository
-                .findOverridesByOutletId(outletId);
+		List<OutletOverrideProjection> outletOverrideProjections = effectiveMenuJpaReadRepository
+				.findOverridesByOutletId(outletId);
 
-        List<OutletLocalMenuItemProjection> localItemsProjection = effectiveMenuJpaReadRepository
-                .findLocalItemsByOutletId(outletId);
+		List<OutletLocalMenuItemProjection> outletLocalMenuItemProjections = effectiveMenuJpaReadRepository
+				.findLocalItemsByOutletId(outletId);
 
-        List<OutletLocalMenuItemSnapshot> localItems = new ArrayList<>();
-        for (OutletLocalMenuItemProjection projection : localItemsProjection) {
-            localItems.add(new OutletLocalMenuItemSnapshot(projection.getMenuItemId(),
-                    projection.getOutletId(),
-                    projection.getItemName(),
-                    projection.getPrice(),
-                    projection.getAvailable(),
-                    projection.getVisible(),
-                    MenuItemStatus.valueOf(projection.getStatus())));
-        }
+		List<OutletLocalMenuItemSnapshot> localItems = outletLocalMenuItemProjections.stream()
+				.map(this::toLocalItemSnapshot).toList();
+		List<BaseMenuItemSnapshot> baseItems = baseMenuItemProjections.stream().map(this::toBaseItemSnapshot).toList();
+		List<OutletOverrideSnapshot> overrideItems = outletOverrideProjections.stream()
+				.map(projection -> toOverrideSnapshot(outletId, projection)).toList();
 
-        List<BaseMenuItemSnapshot> baseItems = new ArrayList<>();
-        for (BaseMenuItemProjection projection : baseMenuProjection) {
-            baseItems.add(new BaseMenuItemSnapshot(
-                    projection.getMenuItemId(),
-                    projection.getItemName(),
-                    projection.getPrice(),
-                    projection.getAvailable(),
-                    projection.getVisible(),
-                    MenuItemStatus.valueOf(projection.getStatus())));
-        }
+		return Optional.of(new EffectiveMenuSourceData(outletId,
+				ChainStatus.valueOf(outletStatusProjection.get().getOutletStatus()), baseItems, overrideItems,
+				localItems));
+	}
 
-        List<OutletOverrideSnapshot> overrideItems = new ArrayList<>();
-        for (OutletOverrideProjection projection : localOverridesProjection) {
-            overrideItems.add(new OutletOverrideSnapshot(
-                    projection.getMenuItemId(),
-                    outletId,
-                    projection.getPriceOverride(),
-                    projection.getAvailableOverride(),
-                    projection.getVisibleOverride()));
-        }
-        return Optional.of(new EffectiveMenuSourceData(
-                outletId,
-                ChainStatus.valueOf(localMenuItemProjections.get().getOutletStatus()),
-                baseItems,
-                overrideItems,
-                localItems));
+	private BaseMenuItemSnapshot toBaseItemSnapshot(BaseMenuItemProjection projection) {
+		return new BaseMenuItemSnapshot(projection.getMenuItemId(), projection.getItemName(), projection.getPrice(),
+				projection.getAvailable(), projection.getVisible(), MenuItemStatus.valueOf(projection.getStatus()));
+	}
 
-    }
+	private OutletLocalMenuItemSnapshot toLocalItemSnapshot(OutletLocalMenuItemProjection projection) {
+		return new OutletLocalMenuItemSnapshot(projection.getMenuItemId(), projection.getOutletId(),
+				projection.getItemName(), projection.getPrice(), projection.getAvailable(), projection.getVisible(),
+				MenuItemStatus.valueOf(projection.getStatus()));
+	}
+
+	private OutletOverrideSnapshot toOverrideSnapshot(Long outletId, OutletOverrideProjection projection) {
+		return new OutletOverrideSnapshot(projection.getMenuItemId(), outletId, projection.getPriceOverride(),
+				projection.getAvailableOverride(), projection.getVisibleOverride());
+	}
 }

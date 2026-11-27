@@ -7,11 +7,11 @@ import com.vishesh.foodcatalog.catalog.domain.ModifierOption;
 
 /** Port for atomic options belonging to one modifier group. */
 public interface ModifierOptionRepository {
-    ModifierOption save(ModifierOption option);
+	ModifierOption save(ModifierOption option);
 
-    Optional<ModifierOption> findById(Long id);
+	Optional<ModifierOption> findById(Long id);
 
-    List<ModifierOption> findByModifierGroupId(Long modifierGroupId);
+	List<ModifierOption> findByModifierGroupId(Long modifierGroupId);
 
-    void deleteById(Long optionId);
+	void deleteById(Long optionId);
 }

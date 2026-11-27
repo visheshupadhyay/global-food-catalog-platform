@@ -15,48 +15,47 @@ import com.vishesh.foodcatalog.catalog.repository.MenuItemRepository;
 @Repository
 public class MenuItemPersistenceAdapter implements MenuItemRepository {
 
-    private final MenuItemJpaRepository repository;
-    private final MenuItemMapper mapper;
+	private final MenuItemJpaRepository repository;
+	private final MenuItemMapper mapper;
 
-    public MenuItemPersistenceAdapter(MenuItemJpaRepository repository, MenuItemMapper mapper) {
-        this.mapper = mapper;
-        this.repository = repository;
-    }
+	public MenuItemPersistenceAdapter(MenuItemJpaRepository repository, MenuItemMapper mapper) {
+		this.mapper = mapper;
+		this.repository = repository;
+	}
 
-    @Override
-    public MenuItem save(MenuItem menuItem) {
-        MenuItemEntity entity = mapper.toEntity(menuItem);
-        // Flush immediately so JPA assigns the new optimistic-lock version
-        // before the service creates the outbox event.
-        MenuItemEntity savedEntity = repository.saveAndFlush(entity);
-        return mapper.toDomain(savedEntity);
-    }
+	@Override
+	public MenuItem save(MenuItem menuItem) {
+		MenuItemEntity entity = mapper.toEntity(menuItem);
+		// Flush immediately so JPA assigns the new optimistic-lock version
+		// before the service creates the outbox event.
+		MenuItemEntity savedEntity = repository.saveAndFlush(entity);
+		return mapper.toDomain(savedEntity);
+	}
 
-    @Override
-    public Optional<MenuItem> findById(Long id) {
-        return repository.findById(id).map(mapper::toDomain);
-    }
+	@Override
+	public Optional<MenuItem> findById(Long id) {
+		return repository.findById(id).map(mapper::toDomain);
+	}
 
-    @Override
-    public Optional<MenuItem> findByIdAndRestaurantChainId(Long id, Long restaurantChainId) {
-        return repository.findByIdAndRestaurantChainId(id, restaurantChainId)
-                .map(mapper::toDomain);
-    }
+	@Override
+	public Optional<MenuItem> findByIdAndRestaurantChainId(Long id, Long restaurantChainId) {
+		return repository.findByIdAndRestaurantChainId(id, restaurantChainId).map(mapper::toDomain);
+	}
 
-    @Override
-    public Optional<MenuItem> findByBusinessCodeAndRestaurantChainId(String businessCode, Long restaurantChainId) {
-        return repository.findByBusinessCodeAndRestaurantChainId(businessCode.trim(), restaurantChainId)
-                .map(mapper::toDomain);
-    }
+	@Override
+	public Optional<MenuItem> findByBusinessCodeAndRestaurantChainId(String businessCode, Long restaurantChainId) {
+		return repository.findByBusinessCodeAndRestaurantChainId(businessCode.trim(), restaurantChainId)
+				.map(mapper::toDomain);
+	}
 
-    @Override
-    public boolean existsByBusinessCodeAndRestaurantChainId(String businessCode, Long restaurantChainId) {
-        return repository.existsByBusinessCodeAndRestaurantChainId(businessCode.trim(), restaurantChainId);
-    }
+	@Override
+	public boolean existsByBusinessCodeAndRestaurantChainId(String businessCode, Long restaurantChainId) {
+		return repository.existsByBusinessCodeAndRestaurantChainId(businessCode.trim(), restaurantChainId);
+	}
 
-    @Override
-    public List<Long> findAffectedOutletIds(Long menuItemId) {
-        return repository.findAffectedOutletIds(menuItemId);
-    }
+	@Override
+	public List<Long> findAffectedOutletIds(Long menuItemId) {
+		return repository.findAffectedOutletIds(menuItemId);
+	}
 
 }

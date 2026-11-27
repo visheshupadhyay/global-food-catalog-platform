@@ -17,26 +17,21 @@ import com.vishesh.foodcatalog.catalog.effective.domain.EffectiveMenuItem;
 @RequestMapping("/api/v1/outlets")
 /** Exposes the menu that a customer sees at one outlet. */
 public class EffectiveMenuController {
-    private final EffectiveMenuService service;
+	private final EffectiveMenuService service;
 
-    public EffectiveMenuController(EffectiveMenuService service) {
-        this.service = service;
-    }
+	public EffectiveMenuController(EffectiveMenuService service) {
+		this.service = service;
+	}
 
-    @GetMapping("/{outletId}/menu")
-    public ResponseEntity<List<EffectiveMenuItemResponse>> getMenu( @PathVariable("outletId")Long outletId) {
-        // The service performs validation, filtering, and inheritance resolution.
-        List<EffectiveMenuItem> effectiveMenuItems = service.getEffectiveMenu(outletId);
-        List<EffectiveMenuItemResponse> effectiveMenuItemResponses = new ArrayList<>();
-        for (EffectiveMenuItem item: effectiveMenuItems) {
-            effectiveMenuItemResponses.add(new EffectiveMenuItemResponse(
-                item.getMenuItemId(), 
-                item.getOutletId(), 
-                item.getItemName(), 
-                item.getPrice(), 
-                item.isAvailable(),
-                item.isVisible()));
-        }
-        return ResponseEntity.ok(effectiveMenuItemResponses);
-    }
+	@GetMapping("/{outletId}/menu")
+	public ResponseEntity<List<EffectiveMenuItemResponse>> getMenu(@PathVariable("outletId") Long outletId) {
+		// The service performs validation, filtering, and inheritance resolution.
+		List<EffectiveMenuItem> effectiveMenuItems = service.getEffectiveMenu(outletId);
+		List<EffectiveMenuItemResponse> effectiveMenuItemResponses = new ArrayList<>();
+		for (EffectiveMenuItem item : effectiveMenuItems) {
+			effectiveMenuItemResponses.add(new EffectiveMenuItemResponse(item.getMenuItemId(), item.getOutletId(),
+					item.getItemName(), item.getPrice(), item.isAvailable(), item.isVisible()));
+		}
+		return ResponseEntity.ok(effectiveMenuItemResponses);
+	}
 }

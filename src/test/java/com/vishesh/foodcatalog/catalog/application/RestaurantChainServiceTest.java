@@ -26,241 +26,222 @@ import com.vishesh.foodcatalog.catalog.repository.RestaurantChainRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class RestaurantChainServiceTest {
-    @Mock
-    RestaurantChainRepository repository;
+	@Mock
+	RestaurantChainRepository repository;
 
-    RestaurantChainService service;
+	RestaurantChainService service;
 
-    @BeforeEach
-    void setUp() {
-        service = new RestaurantChainService(repository);
-    }
+	@BeforeEach
+	void setUp() {
+		service = new RestaurantChainService(repository);
+	}
 
-    @Test
-    void createChain_savesNewChain() {
-        when(repository.existsByBusinessCode("BURGER-KING-100")).thenReturn(false);
-        when(repository.save(any(RestaurantChain.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        RestaurantChain newRestaurant = service.createChain("BURGER-KING-100", "BURGER-KING");
-        assertNotNull(newRestaurant.getCreatedAt());
-        verify(repository, times(1)).save(any(RestaurantChain.class));
-    }
+	@Test
+	void createChain_savesNewChain() {
+		when(repository.existsByBusinessCode("BURGER-KING-100")).thenReturn(false);
+		when(repository.save(any(RestaurantChain.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		RestaurantChain newRestaurant = service.createChain("BURGER-KING-100", "BURGER-KING");
+		assertNotNull(newRestaurant.getCreatedAt());
+		verify(repository, times(1)).save(any(RestaurantChain.class));
+	}
 
-    @Test
-    void createChain_rejectsDuplicateBusinessCode() {
-        when(repository.existsByBusinessCode("BURGER-KING-100")).thenReturn(true);
-        assertThrows(DuplicateBusinessCodeException.class,
-                () -> service.createChain("BURGER-KING-100",
-                        "BURGER-KING"));
-        verify(repository).existsByBusinessCode("BURGER-KING-100");
-        verify(repository, never()).save(any(RestaurantChain.class));
-    }
+	@Test
+	void createChain_rejectsDuplicateBusinessCode() {
+		when(repository.existsByBusinessCode("BURGER-KING-100")).thenReturn(true);
+		assertThrows(DuplicateBusinessCodeException.class, () -> service.createChain("BURGER-KING-100", "BURGER-KING"));
+		verify(repository).existsByBusinessCode("BURGER-KING-100");
+		verify(repository, never()).save(any(RestaurantChain.class));
+	}
 
-    @Test
-    void createChain_passesCorrectValuesToDomain() {
-        String businessCode = "BERLIN-CHAIN-100";
-        String displayName = "Berlin Burgers";
+	@Test
+	void createChain_passesCorrectValuesToDomain() {
+		String businessCode = "BERLIN-CHAIN-100";
+		String displayName = "Berlin Burgers";
 
-        when(repository.existsByBusinessCode(businessCode)).thenReturn(false);
-        when(repository.save(any(RestaurantChain.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+		when(repository.existsByBusinessCode(businessCode)).thenReturn(false);
+		when(repository.save(any(RestaurantChain.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.createChain(businessCode, displayName);
+		service.createChain(businessCode, displayName);
 
-        ArgumentCaptor<RestaurantChain> captor = ArgumentCaptor.forClass(RestaurantChain.class);
+		ArgumentCaptor<RestaurantChain> captor = ArgumentCaptor.forClass(RestaurantChain.class);
 
-        verify(repository).save(captor.capture());
+		verify(repository).save(captor.capture());
 
-        RestaurantChain savedChain = captor.getValue();
+		RestaurantChain savedChain = captor.getValue();
 
-        assertEquals(businessCode, savedChain.getBusinessCode());
-        assertEquals(displayName, savedChain.getDisplayName());
-        assertEquals(ChainStatus.DRAFT, savedChain.getStatus());
-    }
+		assertEquals(businessCode, savedChain.getBusinessCode());
+		assertEquals(displayName, savedChain.getDisplayName());
+		assertEquals(ChainStatus.DRAFT, savedChain.getStatus());
+	}
 
-    @Test
-    void createChain_rejectsBlankBusinessCode() {
-        String businessCode = "  ";
-        String displayName = "Berlin Burgers";
+	@Test
+	void createChain_rejectsBlankBusinessCode() {
+		String businessCode = "  ";
+		String displayName = "Berlin Burgers";
 
-        assertThrows(IllegalArgumentException.class,
-                () -> service.createChain(businessCode, displayName));
-        verifyNoInteractions(repository);
-    }
+		assertThrows(IllegalArgumentException.class, () -> service.createChain(businessCode, displayName));
+		verifyNoInteractions(repository);
+	}
 
-    @Test
-    void createChain_rejectsBlankDisplayName() {
-        String businessCode = "BERLIN-CHAIN-100";
-        String displayName = "  ";
+	@Test
+	void createChain_rejectsBlankDisplayName() {
+		String businessCode = "BERLIN-CHAIN-100";
+		String displayName = "  ";
 
-        assertThrows(IllegalArgumentException.class,
-                () -> service.createChain(businessCode, displayName));
-        verifyNoInteractions(repository);
-    }
+		assertThrows(IllegalArgumentException.class, () -> service.createChain(businessCode, displayName));
+		verifyNoInteractions(repository);
+	}
 
-    @Test
-    void createChain_rejectsNullBusinessCode() {
-        String businessCode = null;
-        String displayName = "Berlin Burgers";
+	@Test
+	void createChain_rejectsNullBusinessCode() {
+		String businessCode = null;
+		String displayName = "Berlin Burgers";
 
-        assertThrows(IllegalArgumentException.class,
-                () -> service.createChain(businessCode, displayName));
-        verifyNoInteractions(repository);
+		assertThrows(IllegalArgumentException.class, () -> service.createChain(businessCode, displayName));
+		verifyNoInteractions(repository);
 
-    }
+	}
 
-    @Test
-    void createChain_rejectsNullDisplayName() {
-        String businessCode = "BERLIN-CHAIN-100";
-        String displayName = null;
+	@Test
+	void createChain_rejectsNullDisplayName() {
+		String businessCode = "BERLIN-CHAIN-100";
+		String displayName = null;
 
-        assertThrows(IllegalArgumentException.class,
-                () -> service.createChain(businessCode, displayName));
-        verifyNoInteractions(repository);
-    }
+		assertThrows(IllegalArgumentException.class, () -> service.createChain(businessCode, displayName));
+		verifyNoInteractions(repository);
+	}
 
-    @Test
-    void createChain_normalizesMixedCaseBusinessCode() {
-        String businessCode = " berLin-Chain-100 ";
-        String displayName = "Berlin Burgers";
+	@Test
+	void createChain_normalizesMixedCaseBusinessCode() {
+		String businessCode = " berLin-Chain-100 ";
+		String displayName = "Berlin Burgers";
 
-        when(repository.existsByBusinessCode(businessCode.trim().toUpperCase(Locale.ROOT))).thenReturn(false);
-        when(repository.save(any(RestaurantChain.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+		when(repository.existsByBusinessCode(businessCode.trim().toUpperCase(Locale.ROOT))).thenReturn(false);
+		when(repository.save(any(RestaurantChain.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.createChain(businessCode, displayName);
+		service.createChain(businessCode, displayName);
 
-        ArgumentCaptor<RestaurantChain> captor = ArgumentCaptor.forClass(RestaurantChain.class);
+		ArgumentCaptor<RestaurantChain> captor = ArgumentCaptor.forClass(RestaurantChain.class);
 
-        verify(repository).save(captor.capture());
+		verify(repository).save(captor.capture());
 
-        RestaurantChain savedChain = captor.getValue();
+		RestaurantChain savedChain = captor.getValue();
 
-        assertEquals(businessCode.trim().toUpperCase(Locale.ROOT), savedChain.getBusinessCode());
-        assertEquals(displayName, savedChain.getDisplayName());
-        assertEquals(ChainStatus.DRAFT, savedChain.getStatus());
-    }
+		assertEquals(businessCode.trim().toUpperCase(Locale.ROOT), savedChain.getBusinessCode());
+		assertEquals(displayName, savedChain.getDisplayName());
+		assertEquals(ChainStatus.DRAFT, savedChain.getStatus());
+	}
 
-    @Test
-    void createChain_normalizesLowercaseBusinessCode() {
-        String businessCode = " berlin-chain-100 ";
-        String displayName = "Berlin Burgers";
+	@Test
+	void createChain_normalizesLowercaseBusinessCode() {
+		String businessCode = " berlin-chain-100 ";
+		String displayName = "Berlin Burgers";
 
-        when(repository.existsByBusinessCode(businessCode.trim().toUpperCase(Locale.ROOT))).thenReturn(false);
-        when(repository.save(any(RestaurantChain.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+		when(repository.existsByBusinessCode(businessCode.trim().toUpperCase(Locale.ROOT))).thenReturn(false);
+		when(repository.save(any(RestaurantChain.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.createChain(businessCode, displayName);
+		service.createChain(businessCode, displayName);
 
-        ArgumentCaptor<RestaurantChain> captor = ArgumentCaptor.forClass(RestaurantChain.class);
+		ArgumentCaptor<RestaurantChain> captor = ArgumentCaptor.forClass(RestaurantChain.class);
 
-        verify(repository).save(captor.capture());
+		verify(repository).save(captor.capture());
 
-        RestaurantChain savedChain = captor.getValue();
+		RestaurantChain savedChain = captor.getValue();
 
-        assertEquals(businessCode.trim().toUpperCase(Locale.ROOT), savedChain.getBusinessCode());
-        assertEquals(displayName, savedChain.getDisplayName());
-        assertEquals(ChainStatus.DRAFT, savedChain.getStatus());
-    }
+		assertEquals(businessCode.trim().toUpperCase(Locale.ROOT), savedChain.getBusinessCode());
+		assertEquals(displayName, savedChain.getDisplayName());
+		assertEquals(ChainStatus.DRAFT, savedChain.getStatus());
+	}
 
-    @Test
-    void createChain_rejectsDuplicateAfterBusinessCodeNormalization() {
-        String businessCode = " berlin-chain-100 ";
-        String displayName = "Berlin Burgers";
+	@Test
+	void createChain_rejectsDuplicateAfterBusinessCodeNormalization() {
+		String businessCode = " berlin-chain-100 ";
+		String displayName = "Berlin Burgers";
 
-        when(repository.existsByBusinessCode(businessCode.trim().toUpperCase(Locale.ROOT))).thenReturn(false);
-        when(repository.save(any(RestaurantChain.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+		when(repository.existsByBusinessCode(businessCode.trim().toUpperCase(Locale.ROOT))).thenReturn(false);
+		when(repository.save(any(RestaurantChain.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.createChain(businessCode, displayName);
-        when(repository.existsByBusinessCode(businessCode.trim().toUpperCase(Locale.ROOT))).thenReturn(true);
-        assertThrows(DuplicateBusinessCodeException.class, () -> service.createChain(businessCode, displayName));
-        ArgumentCaptor<RestaurantChain> captor = ArgumentCaptor.forClass(RestaurantChain.class);
+		service.createChain(businessCode, displayName);
+		when(repository.existsByBusinessCode(businessCode.trim().toUpperCase(Locale.ROOT))).thenReturn(true);
+		assertThrows(DuplicateBusinessCodeException.class, () -> service.createChain(businessCode, displayName));
+		ArgumentCaptor<RestaurantChain> captor = ArgumentCaptor.forClass(RestaurantChain.class);
 
-        verify(repository).save(captor.capture());
+		verify(repository).save(captor.capture());
 
-        RestaurantChain savedChain = captor.getValue();
+		RestaurantChain savedChain = captor.getValue();
 
-        assertEquals(businessCode.trim().toUpperCase(Locale.ROOT), savedChain.getBusinessCode());
-        assertEquals(displayName, savedChain.getDisplayName());
-        assertEquals(ChainStatus.DRAFT, savedChain.getStatus());
-        verify(repository).save(any(RestaurantChain.class));
-    }
+		assertEquals(businessCode.trim().toUpperCase(Locale.ROOT), savedChain.getBusinessCode());
+		assertEquals(displayName, savedChain.getDisplayName());
+		assertEquals(ChainStatus.DRAFT, savedChain.getStatus());
+		verify(repository).save(any(RestaurantChain.class));
+	}
 
-    @Test
-    void findById_returnsChainWhenRepositoryFindsIt() {
-        RestaurantChain persistedChain = persistedChain(42L, "DH-DE", "Delivery Hero Germany");
-        when(repository.findById(42L)).thenReturn(Optional.of(persistedChain));
+	@Test
+	void findById_returnsChainWhenRepositoryFindsIt() {
+		RestaurantChain persistedChain = persistedChain(42L, "DH-DE", "Delivery Hero Germany");
+		when(repository.findById(42L)).thenReturn(Optional.of(persistedChain));
 
-        RestaurantChain result = service.findChainById(42L);
+		RestaurantChain result = service.findChainById(42L);
 
-        assertEquals(persistedChain, result);
-        verify(repository).findById(42L);
-    }
+		assertEquals(persistedChain, result);
+		verify(repository).findById(42L);
+	}
 
-    @Test
-    void findById_throwsNotFoundWhenRepositoryIsEmpty() {
-        when(repository.findById(42L)).thenReturn(Optional.empty());
+	@Test
+	void findById_throwsNotFoundWhenRepositoryIsEmpty() {
+		when(repository.findById(42L)).thenReturn(Optional.empty());
 
-        RestaurantChainNotFoundException exception = assertThrows(RestaurantChainNotFoundException.class,
-                () -> service.findChainById(42L));
-        assertEquals("Restaurant chain with ID: 42 not found", exception.getMessage());
-        verify(repository).findById(42L);
-    }
+		RestaurantChainNotFoundException exception = assertThrows(RestaurantChainNotFoundException.class,
+				() -> service.findChainById(42L));
+		assertEquals("Restaurant chain with ID: 42 not found", exception.getMessage());
+		verify(repository).findById(42L);
+	}
 
-    @Test
-    void findByBusinessCode_normalizesLowercaseInput() {
-        RestaurantChain persistedChain = persistedChain(42L, "DH-DE", "Delivery Hero Germany");
-        when(repository.findByBusinessCode("DH-DE")).thenReturn(Optional.of(persistedChain));
+	@Test
+	void findByBusinessCode_normalizesLowercaseInput() {
+		RestaurantChain persistedChain = persistedChain(42L, "DH-DE", "Delivery Hero Germany");
+		when(repository.findByBusinessCode("DH-DE")).thenReturn(Optional.of(persistedChain));
 
-        RestaurantChain result = service.findChainByBusinessCode(" dh-de ");
+		RestaurantChain result = service.findChainByBusinessCode(" dh-de ");
 
-        assertEquals(persistedChain, result);
-        verify(repository).findByBusinessCode("DH-DE");
-    }
+		assertEquals(persistedChain, result);
+		verify(repository).findByBusinessCode("DH-DE");
+	}
 
-    @Test
-    void findByBusinessCode_returnsChainWhenRepositoryFindsIt() {
-        RestaurantChain persistedChain = persistedChain(42L, "DH-DE", "Delivery Hero Germany");
-        when(repository.findByBusinessCode("DH-DE")).thenReturn(Optional.of(persistedChain));
+	@Test
+	void findByBusinessCode_returnsChainWhenRepositoryFindsIt() {
+		RestaurantChain persistedChain = persistedChain(42L, "DH-DE", "Delivery Hero Germany");
+		when(repository.findByBusinessCode("DH-DE")).thenReturn(Optional.of(persistedChain));
 
-        RestaurantChain result = service.findChainByBusinessCode("DH-DE");
+		RestaurantChain result = service.findChainByBusinessCode("DH-DE");
 
-        assertEquals(persistedChain, result);
-        verify(repository).findByBusinessCode("DH-DE");
-    }
+		assertEquals(persistedChain, result);
+		verify(repository).findByBusinessCode("DH-DE");
+	}
 
-    @Test
-    void findByBusinessCode_throwsNotFoundWhenRepositoryIsEmpty() {
-        when(repository.findByBusinessCode("DH-DE")).thenReturn(Optional.empty());
+	@Test
+	void findByBusinessCode_throwsNotFoundWhenRepositoryIsEmpty() {
+		when(repository.findByBusinessCode("DH-DE")).thenReturn(Optional.empty());
 
-        assertThrows(RestaurantChainNotFoundException.class,
-                () -> service.findChainByBusinessCode("DH-DE"));
-        verify(repository).findByBusinessCode("DH-DE");
-    }
+		assertThrows(RestaurantChainNotFoundException.class, () -> service.findChainByBusinessCode("DH-DE"));
+		verify(repository).findByBusinessCode("DH-DE");
+	}
 
-    @Test
-    void findById_rejectsInvalidId() {
-        assertThrows(IllegalArgumentException.class,
-                () -> service.findChainById(0L));
-        verifyNoInteractions(repository);
-    }
+	@Test
+	void findById_rejectsInvalidId() {
+		assertThrows(IllegalArgumentException.class, () -> service.findChainById(0L));
+		verifyNoInteractions(repository);
+	}
 
-    @Test
-    void findByBusinessCode_rejectsBlankBusinessCode() {
-        assertThrows(IllegalArgumentException.class,
-                () -> service.findChainByBusinessCode("  "));
-        verifyNoInteractions(repository);
-    }
+	@Test
+	void findByBusinessCode_rejectsBlankBusinessCode() {
+		assertThrows(IllegalArgumentException.class, () -> service.findChainByBusinessCode("  "));
+		verifyNoInteractions(repository);
+	}
 
-    private RestaurantChain persistedChain(Long id, String businessCode, String displayName) {
-        return new RestaurantChain(
-                businessCode,
-                displayName,
-                ChainStatus.DRAFT,
-                java.time.Instant.parse("2026-01-01T00:00:00Z"),
-                java.time.Instant.parse("2026-01-01T00:00:00Z"),
-                id);
-    }
-
+	private RestaurantChain persistedChain(Long id, String businessCode, String displayName) {
+		return new RestaurantChain(businessCode, displayName, ChainStatus.DRAFT,
+				java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.Instant.parse("2026-01-01T00:00:00Z"), id);
+	}
 
 }

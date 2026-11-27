@@ -1,12 +1,10 @@
 package com.vishesh.foodcatalog.catalog.application;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import tools.jackson.core.JacksonException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -16,291 +14,232 @@ import com.vishesh.foodcatalog.catalog.domain.MenuItem;
 import com.vishesh.foodcatalog.catalog.domain.MenuItemKind;
 import com.vishesh.foodcatalog.catalog.domain.MenuItemStatus;
 import com.vishesh.foodcatalog.catalog.event.application.MenuItemChangedEventFactory;
-import com.vishesh.foodcatalog.catalog.event.application.OutboxEventRepository;
+import com.vishesh.foodcatalog.catalog.event.application.CatalogEventOutboxWriter;
 import com.vishesh.foodcatalog.catalog.event.domain.MenuItemChangedEvent;
-import com.vishesh.foodcatalog.catalog.event.domain.OutboxEvent;
-import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventStatus;
 import com.vishesh.foodcatalog.catalog.repository.MenuGroupOutletRepository;
 import com.vishesh.foodcatalog.catalog.repository.MenuGroupRepository;
 import com.vishesh.foodcatalog.catalog.repository.MenuItemRepository;
 import com.vishesh.foodcatalog.catalog.repository.OutletRepository;
 import com.vishesh.foodcatalog.catalog.repository.RestaurantChainRepository;
 
-import tools.jackson.databind.ObjectMapper;
-
 /** Applies business rules before a menu item is saved. */
 @Service
 public class MenuItemService {
-    private final MenuItemRepository menuItemRepository;
-    private final RestaurantChainRepository restaurantChainRepository;
-    private final OutletRepository outletRepository;
-    private final MenuGroupRepository menuGroupRepository;
-    private final MenuGroupOutletRepository menuGroupOutletRepository;
-    private final MenuItemChangedEventFactory menuItemChangedEventFactory;
-    private final OutboxEventRepository outboxEventRepository;
-    private final ObjectMapper objectMapper;
-    private final BundleRefreshPublisher bundleRefreshPublisher;
+	private final MenuItemRepository menuItemRepository;
+	private final RestaurantChainRepository restaurantChainRepository;
+	private final OutletRepository outletRepository;
+	private final MenuGroupRepository menuGroupRepository;
+	private final MenuGroupOutletRepository menuGroupOutletRepository;
+	private final MenuItemChangedEventFactory menuItemChangedEventFactory;
+	private final CatalogEventOutboxWriter outboxWriter;
+	private final BundleRefreshPublisher bundleRefreshPublisher;
 
-    public MenuItemService(
-            @Qualifier("menuItemPersistenceAdapter") MenuItemRepository menuItemRepository,
-            @Qualifier("restaurantChainPersistenceAdapter") RestaurantChainRepository restaurantChainRepository,
-            @Qualifier("outletPersistenceAdapter") OutletRepository outletRepository,
-            @Qualifier("menuGroupPersistenceAdapter") MenuGroupRepository menuGroupRepository,
-            MenuItemChangedEventFactory menuItemChangedEventFactory,
-            @Qualifier("outboxEventPersistenceAdapter") OutboxEventRepository outboxEventRepository,
-            ObjectMapper objectMapper,
-            @Qualifier("menuGroupOutletPersistenceAdapter") MenuGroupOutletRepository menuGroupOutletRepository,
-            BundleRefreshPublisher bundleRefreshPublisher) {
+	public MenuItemService(@Qualifier("menuItemPersistenceAdapter") MenuItemRepository menuItemRepository,
+			@Qualifier("restaurantChainPersistenceAdapter") RestaurantChainRepository restaurantChainRepository,
+			@Qualifier("outletPersistenceAdapter") OutletRepository outletRepository,
+			@Qualifier("menuGroupPersistenceAdapter") MenuGroupRepository menuGroupRepository,
+			MenuItemChangedEventFactory menuItemChangedEventFactory, CatalogEventOutboxWriter outboxWriter,
+			@Qualifier("menuGroupOutletPersistenceAdapter") MenuGroupOutletRepository menuGroupOutletRepository,
+			BundleRefreshPublisher bundleRefreshPublisher) {
 
-        this.menuItemRepository = menuItemRepository;
-        this.restaurantChainRepository = restaurantChainRepository;
-        this.outletRepository = outletRepository;
-        this.menuGroupRepository = menuGroupRepository;
-        this.menuItemChangedEventFactory = menuItemChangedEventFactory;
-        this.outboxEventRepository = outboxEventRepository;
-        this.objectMapper = objectMapper;
-        this.menuGroupOutletRepository = menuGroupOutletRepository;
-        this.bundleRefreshPublisher = bundleRefreshPublisher;
-    }
+		this.menuItemRepository = menuItemRepository;
+		this.restaurantChainRepository = restaurantChainRepository;
+		this.outletRepository = outletRepository;
+		this.menuGroupRepository = menuGroupRepository;
+		this.menuItemChangedEventFactory = menuItemChangedEventFactory;
+		this.outboxWriter = outboxWriter;
+		this.menuGroupOutletRepository = menuGroupOutletRepository;
+		this.bundleRefreshPublisher = bundleRefreshPublisher;
+	}
 
-    public MenuItem findMenuItemById(Long id) {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Menu item ID must be greater than zero");
-        }
-        Optional<MenuItem> o = menuItemRepository.findById(id);
+	public MenuItem findMenuItemById(Long id) {
+		if (id == null || id <= 0) {
+			throw new IllegalArgumentException("Menu item ID must be greater than zero");
+		}
+		Optional<MenuItem> o = menuItemRepository.findById(id);
 
-        if (o.isEmpty()) {
-            throw new MenuItemNotFoundException("Menu item with ID: " + id + " not found");
-        }
-        return o.get();
-    }
+		if (o.isEmpty()) {
+			throw new MenuItemNotFoundException("Menu item with ID: " + id + " not found");
+		}
+		return o.get();
+	}
 
-    public MenuItem createMenuItem(String businessCode,
-            String itemName,
-            BigDecimal itemPrice,
-            Long restaurantChainId,
-            Long menuGroupId,
-            Long menuCategoryId,
-            Long outletId) {
+	public MenuItem createMenuItem(String businessCode, String itemName, BigDecimal itemPrice, Long restaurantChainId,
+			Long menuGroupId, Long menuCategoryId, Long outletId) {
 
-        // Existing callers represent ordinary products. Keeping this overload
-        // preserves their behavior while exposing an explicit BUNDLE path.
-        return createMenuItem(businessCode, itemName, itemPrice, restaurantChainId,
-                menuGroupId, menuCategoryId, outletId, MenuItemKind.PRODUCT);
-    }
+		// Existing callers represent ordinary products. Keeping this overload
+		// preserves their behavior while exposing an explicit BUNDLE path.
+		return createMenuItem(businessCode, itemName, itemPrice, restaurantChainId, menuGroupId, menuCategoryId,
+				outletId, MenuItemKind.PRODUCT);
+	}
 
-    /** Creates either a normal product or a bundle root. */
-    public MenuItem createMenuItem(String businessCode,
-            String itemName,
-            BigDecimal itemPrice,
-            Long restaurantChainId,
-            Long menuGroupId,
-            Long menuCategoryId,
-            Long outletId,
-            MenuItemKind menuItemKind) {
+	/** Creates either a normal product or a bundle root. */
+	public MenuItem createMenuItem(String businessCode, String itemName, BigDecimal itemPrice, Long restaurantChainId,
+			Long menuGroupId, Long menuCategoryId, Long outletId, MenuItemKind menuItemKind) {
 
-        if (businessCode == null || businessCode.isBlank()) {
-            throw new IllegalArgumentException("Business code cannot be null ");
-        }
+		if (businessCode == null || businessCode.isBlank()) {
+			throw new IllegalArgumentException("Business code cannot be null ");
+		}
 
-        businessCode = businessCode.trim();
+		businessCode = businessCode.trim();
 
-        if (businessCode.isBlank()) {
-            throw new IllegalArgumentException("Business code cannot be blank");
-        }
+		if (businessCode.isBlank()) {
+			throw new IllegalArgumentException("Business code cannot be blank");
+		}
 
-        if (itemName == null || itemName.isBlank()) {
-            throw new IllegalArgumentException("Item name cannot be null");
-        }
+		if (itemName == null || itemName.isBlank()) {
+			throw new IllegalArgumentException("Item name cannot be null");
+		}
 
-        itemName = itemName.trim();
+		itemName = itemName.trim();
 
-        if (itemName.isBlank()) {
-            throw new IllegalArgumentException("Item name cannot be blank");
-        }
+		if (itemName.isBlank()) {
+			throw new IllegalArgumentException("Item name cannot be blank");
+		}
 
-        if (itemPrice == null || itemPrice.signum() < 0) {
-            throw new IllegalArgumentException("Item price must be zero or greater");
-        }
-        if (restaurantChainId == null || restaurantChainId <= 0) {
-            throw new IllegalArgumentException("Restaurant chain ID must be greater than zero");
-        }
-        if ((menuGroupId == null) == (outletId == null)) {
-            throw new IllegalArgumentException("Exactly one of menu group ID or outlet ID is required");
-        }
-        if (menuGroupId != null && menuGroupId <= 0) {
-            throw new IllegalArgumentException("Menu group ID must be greater than zero");
-        }
-        if (outletId != null && outletId <= 0) {
-            throw new IllegalArgumentException("Outlet ID must be greater than zero");
-        }
-        if (menuCategoryId != null && menuCategoryId <= 0) {
-            throw new IllegalArgumentException("Menu category ID must be greater than zero");
-        }
-        if (menuItemKind == null) {
-            throw new IllegalArgumentException("Menu item kind must be present");
-        }
+		if (itemPrice == null || itemPrice.signum() < 0) {
+			throw new IllegalArgumentException("Item price must be zero or greater");
+		}
+		if (restaurantChainId == null || restaurantChainId <= 0) {
+			throw new IllegalArgumentException("Restaurant chain ID must be greater than zero");
+		}
+		if ((menuGroupId == null) == (outletId == null)) {
+			throw new IllegalArgumentException("Exactly one of menu group ID or outlet ID is required");
+		}
+		if (menuGroupId != null && menuGroupId <= 0) {
+			throw new IllegalArgumentException("Menu group ID must be greater than zero");
+		}
+		if (outletId != null && outletId <= 0) {
+			throw new IllegalArgumentException("Outlet ID must be greater than zero");
+		}
+		if (menuCategoryId != null && menuCategoryId <= 0) {
+			throw new IllegalArgumentException("Menu category ID must be greater than zero");
+		}
+		if (menuItemKind == null) {
+			throw new IllegalArgumentException("Menu item kind must be present");
+		}
 
-        if (restaurantChainRepository.findById(restaurantChainId).isEmpty()) {
-            throw new RestaurantChainNotFoundException("Restaurant Chain not found!");
-        }
-        if (menuGroupId != null
-                && menuGroupRepository.findByIdAndRestaurantChainId(menuGroupId, restaurantChainId).isEmpty()) {
-            throw new MenuGroupNotFoundException("Menu Group " + menuGroupId
-                    + " was not found for restaurant chain " + restaurantChainId);
-        }
-        if (outletId != null
-                && !outletRepository.existsByIdAndRestaurantChainId(outletId, restaurantChainId)) {
-            throw new OutletNotFoundException("Outlet " + outletId
-                    + " was not found for restaurant chain " + restaurantChainId);
-        }
-        if (menuItemRepository.existsByBusinessCodeAndRestaurantChainId(businessCode, restaurantChainId)) {
-            throw new DuplicateMenuItemException("Restaurant Chain with id: " + restaurantChainId
-                    + "  and with businessCode: " + businessCode + " already exists!");
-        }
+		if (restaurantChainRepository.findById(restaurantChainId).isEmpty()) {
+			throw new RestaurantChainNotFoundException("Restaurant Chain not found!");
+		}
+		if (menuGroupId != null
+				&& menuGroupRepository.findByIdAndRestaurantChainId(menuGroupId, restaurantChainId).isEmpty()) {
+			throw new MenuGroupNotFoundException(
+					"Menu Group " + menuGroupId + " was not found for restaurant chain " + restaurantChainId);
+		}
+		if (outletId != null && !outletRepository.existsByIdAndRestaurantChainId(outletId, restaurantChainId)) {
+			throw new OutletNotFoundException(
+					"Outlet " + outletId + " was not found for restaurant chain " + restaurantChainId);
+		}
+		if (menuItemRepository.existsByBusinessCodeAndRestaurantChainId(businessCode, restaurantChainId)) {
+			throw new DuplicateMenuItemException("Restaurant Chain with id: " + restaurantChainId
+					+ "  and with businessCode: " + businessCode + " already exists!");
+		}
 
-        MenuItem menuItem = new MenuItem(businessCode, itemName, itemPrice, restaurantChainId, menuGroupId,
-                menuCategoryId, outletId, menuItemKind);
+		MenuItem menuItem = new MenuItem(businessCode, itemName, itemPrice, restaurantChainId, menuGroupId,
+				menuCategoryId, outletId, menuItemKind);
 
-        return menuItemRepository.save(menuItem);
-    }
+		return menuItemRepository.save(menuItem);
+	}
 
-    /** Updates the item and creates one outlet event in the same transaction. */
-    @Transactional
-    public MenuItem updateMenuItem(Long menuItemId, Long restaurantChainId, MenuItemUpdateRequest request) {
-        if (menuItemId == null || menuItemId <= 0) {
-            throw new IllegalArgumentException("Menu item ID must be greater than zero");
-        }
+	/** Updates the item and creates one outlet event in the same transaction. */
+	@Transactional
+	public MenuItem updateMenuItem(Long menuItemId, Long restaurantChainId, MenuItemUpdateRequest request) {
+		if (menuItemId == null || menuItemId <= 0) {
+			throw new IllegalArgumentException("Menu item ID must be greater than zero");
+		}
 
-        if (restaurantChainId == null || restaurantChainId <= 0) {
-            throw new IllegalArgumentException("Restaurant chain ID must be greater than zero");
-        }
+		if (restaurantChainId == null || restaurantChainId <= 0) {
+			throw new IllegalArgumentException("Restaurant chain ID must be greater than zero");
+		}
 
-        if (request == null) {
-            throw new IllegalArgumentException("Update request must be present");
-        }
+		if (request == null) {
+			throw new IllegalArgumentException("Update request must be present");
+		}
 
-        if (restaurantChainRepository.findById(restaurantChainId).isEmpty()) {
-            throw new RestaurantChainNotFoundException(
-                    "Restaurant chain with ID " + restaurantChainId + " was not found");
-        }
+		if (restaurantChainRepository.findById(restaurantChainId).isEmpty()) {
+			throw new RestaurantChainNotFoundException(
+					"Restaurant chain with ID " + restaurantChainId + " was not found");
+		}
 
-        MenuItem menuItem = menuItemRepository
-                .findByIdAndRestaurantChainId(menuItemId, restaurantChainId)
-                .orElseThrow(() -> new MenuItemNotFoundException(
-                        "Menu item with ID " + menuItemId + " was not found for restaurant chain "
-                                + restaurantChainId));
+		MenuItem menuItem = menuItemRepository.findByIdAndRestaurantChainId(menuItemId, restaurantChainId)
+				.orElseThrow(() -> new MenuItemNotFoundException("Menu item with ID " + menuItemId
+						+ " was not found for restaurant chain " + restaurantChainId));
 
-        if (!menuItem.getVersion().equals(request.getExpectedVersion())) {
-            throw new MenuItemVersionConflictException(
-                    "Menu item version is stale; expected " + menuItem.getVersion()
-                            + " but received " + request.getExpectedVersion());
-        }
+		if (!menuItem.getVersion().equals(request.getExpectedVersion())) {
+			throw new MenuItemVersionConflictException("Menu item version is stale; expected " + menuItem.getVersion()
+					+ " but received " + request.getExpectedVersion());
+		}
 
-        BigDecimal updatedPrice = request.getPrice();
-        Boolean updatedAvailability = request.getAvailability();
-        Boolean updatedVisibility = request.getVisibility();
-        if (updatedPrice != null) {
-            menuItem.updatePrice(updatedPrice);
-        }
+		MenuItemStatus previousStatus = menuItem.getStatus();
+		applyRequestedChanges(menuItem, request);
 
-        if (updatedAvailability != null) {
-            menuItem.updateAvailability(updatedAvailability);
-        }
+		MenuItem savedItem = menuItemRepository.save(menuItem);
+		List<Long> outletIds = resolveAffectedOutletIds(savedItem);
 
-        if (updatedVisibility != null) {
-            menuItem.updateVisibility(updatedVisibility);
-        }
+		// A draft item is intentionally private to Catalog. Its first customer-facing
+		// event is the complete activation snapshot, not a sparse update.
+		boolean activated = previousStatus == MenuItemStatus.DRAFT && savedItem.getStatus() == MenuItemStatus.ACTIVE;
+		boolean remainsDraft = savedItem.getStatus() == MenuItemStatus.DRAFT;
+		boolean statusChanged = request.getStatus() != null && previousStatus != savedItem.getStatus();
 
-        MenuItemStatus previousStatus = menuItem.getStatus();
-        if (request.getStatus() != null) {
-            menuItem.updateStatus(request.getStatus());
-        }
+		// A lifecycle transition must carry the stored visibility. In particular,
+		// HIDDEN -> ACTIVE needs to restore the item's real visibility downstream.
+		Boolean eventVisibility = statusChanged ? Boolean.valueOf(savedItem.isVisibility()) : request.getVisibility();
 
-        MenuItem savedItem = menuItemRepository.save(menuItem);
-        List<Long> outletIds = new ArrayList<>();
-        if (savedItem.getOutletId() != null) {
-            outletIds.add(savedItem.getOutletId());
-        } else {
-            outletIds = menuGroupOutletRepository.findOutletIdsByMenuGroupId(savedItem.getMenuGroupId());
-        }
+		// One admin action may emit the changed child plus multiple parent
+		// bundles. A shared correlation ID keeps that fan-out traceable.
+		String correlationId = UUID.randomUUID().toString();
+		if (!remainsDraft) {
+			for (Long outletId : outletIds) {
+				MenuItemChangedEvent menuItemChangedEvent = activated
+						? menuItemChangedEventFactory.createMenuItemActivated(savedItem.getId(),
+								savedItem.getRestaurantChainId(), savedItem.getVersion(), savedItem.getItemPrice(),
+								savedItem.isAvailability(), savedItem.isVisibility(), outletId, correlationId,
+								savedItem.getStatus(), savedItem.getItemName())
+						: menuItemChangedEventFactory.create(savedItem.getId(), savedItem.getRestaurantChainId(),
+								savedItem.getVersion(), request.getPrice(), request.getAvailability(), eventVisibility,
+								outletId, correlationId, savedItem.getStatus(), null);
 
-        // A draft item is intentionally private to Catalog. Its first customer-facing
-        // event is the complete activation snapshot, not a sparse update.
-        boolean activated = previousStatus == MenuItemStatus.DRAFT
-                && savedItem.getStatus() == MenuItemStatus.ACTIVE;
-        boolean remainsDraft = savedItem.getStatus() == MenuItemStatus.DRAFT;
-        boolean statusChanged = request.getStatus() != null && previousStatus != savedItem.getStatus();
+				outboxWriter.save(menuItemChangedEvent);
+			}
+		}
 
-        // A lifecycle transition must carry the stored visibility. In particular,
-        // HIDDEN -> ACTIVE needs to restore the item's real visibility downstream.
-        Boolean eventVisibility = statusChanged
-                ? Boolean.valueOf(savedItem.isVisibility())
-                : updatedVisibility;
+		// A child can be reused by multiple meals/combos. Refreshing those
+		// complete snapshots prevents Effective Menu from serving stale child
+		// details without ever reading Catalog tables directly.
+		bundleRefreshPublisher.publishAncestorBundleRefreshes(savedItem.getId(), savedItem.getRestaurantChainId(),
+				correlationId);
+		return savedItem;
 
-        // One admin action may emit the changed child plus multiple parent
-        // bundles. A shared correlation ID keeps that fan-out traceable.
-        String correlationId = UUID.randomUUID().toString();
-        if (!remainsDraft) {
-            for (Long outletId : outletIds) {
-                MenuItemChangedEvent menuItemChangedEvent = activated
-                        ? menuItemChangedEventFactory.createMenuItemActivated(
-                                savedItem.getId(),
-                                savedItem.getRestaurantChainId(),
-                                savedItem.getVersion(),
-                                savedItem.getItemPrice(),
-                                savedItem.isAvailability(),
-                                savedItem.isVisibility(),
-                                outletId,
-                                correlationId,
-                                savedItem.getStatus(),
-                                savedItem.getItemName())
-                        : menuItemChangedEventFactory.create(
-                                savedItem.getId(),
-                                savedItem.getRestaurantChainId(),
-                                savedItem.getVersion(),
-                                updatedPrice,
-                                updatedAvailability,
-                                eventVisibility,
-                                outletId,
-                                correlationId,
-                                savedItem.getStatus(),
-                                null);
+	}
 
-                String payload;
-                try {
-                    payload = objectMapper.writeValueAsString(menuItemChangedEvent);
-                } catch (JacksonException exception) {
-                    throw new IllegalStateException("Could not serialize menu-item change event", exception);
-                }
+	/**
+	 * Applies only the fields an administrator supplied; null means "leave it
+	 * unchanged".
+	 */
+	private void applyRequestedChanges(MenuItem menuItem, MenuItemUpdateRequest request) {
+		if (request.getPrice() != null) {
+			menuItem.updatePrice(request.getPrice());
+		}
+		if (request.getAvailability() != null) {
+			menuItem.updateAvailability(request.getAvailability());
+		}
+		if (request.getVisibility() != null) {
+			menuItem.updateVisibility(request.getVisibility());
+		}
+		if (request.getStatus() != null) {
+			menuItem.updateStatus(request.getStatus());
+		}
+	}
 
-                OutboxEvent outboxEvent = new OutboxEvent(
-                        null,
-                        menuItemChangedEvent.getEventId(),
-                        menuItemChangedEvent.getOriginalEventId(),
-                        menuItemChangedEvent.getEventType(),
-                        String.valueOf(savedItem.getId()),
-                        payload,
-                        OutboxEventStatus.PENDING,
-                        0L,
-                        null,
-                        null,
-                        menuItemChangedEvent.getOccurredAt(),
-                        null,
-                        null,
-                        savedItem.getId(),
-                        savedItem.getVersion());
-
-                outboxEventRepository.save(outboxEvent);
-            }
-        }
-
-        // A child can be reused by multiple meals/combos. Refreshing those
-        // complete snapshots prevents Effective Menu from serving stale child
-        // details without ever reading Catalog tables directly.
-        bundleRefreshPublisher.publishAncestorBundleRefreshes(
-                savedItem.getId(), savedItem.getRestaurantChainId(), correlationId);
-        return savedItem;
-
-    }
+	/**
+	 * A local item affects one outlet; a shared item affects every assigned outlet.
+	 */
+	private List<Long> resolveAffectedOutletIds(MenuItem menuItem) {
+		if (menuItem.getOutletId() != null) {
+			return List.of(menuItem.getOutletId());
+		}
+		return menuGroupOutletRepository.findOutletIdsByMenuGroupId(menuItem.getMenuGroupId());
+	}
 }

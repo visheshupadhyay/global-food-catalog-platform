@@ -28,99 +28,90 @@ import com.vishesh.foodcatalog.catalog.effective.domain.OutletOverrideSnapshot;
 @ExtendWith(MockitoExtension.class)
 class EffectiveMenuServiceTest {
 
-    private static final Long OUTLET_ID = 201L;
+	private static final Long OUTLET_ID = 201L;
 
-    @Mock
-    private EffectiveMenuDataProvider effectiveMenuDataProvider;
+	@Mock
+	private EffectiveMenuDataProvider effectiveMenuDataProvider;
 
-    @Mock
-    private EffectiveMenuAssembler effectiveMenuAssembler;
+	@Mock
+	private EffectiveMenuAssembler effectiveMenuAssembler;
 
-    private EffectiveMenuService service;
+	private EffectiveMenuService service;
 
-    @BeforeEach
-    void setUp() {
-        service = new EffectiveMenuService(effectiveMenuDataProvider, effectiveMenuAssembler);
-    }
+	@BeforeEach
+	void setUp() {
+		service = new EffectiveMenuService(effectiveMenuDataProvider, effectiveMenuAssembler);
+	}
 
-    @Test
-    void getEffectiveMenu_rejectsNullOutletIdBeforeProviderCall() {
-        assertThrows(IllegalArgumentException.class, () -> service.getEffectiveMenu(null));
+	@Test
+	void getEffectiveMenu_rejectsNullOutletIdBeforeProviderCall() {
+		assertThrows(IllegalArgumentException.class, () -> service.getEffectiveMenu(null));
 
-        verifyNoInteractions(effectiveMenuDataProvider, effectiveMenuAssembler);
-    }
+		verifyNoInteractions(effectiveMenuDataProvider, effectiveMenuAssembler);
+	}
 
-    @Test
-    void getEffectiveMenu_rejectsZeroOutletIdBeforeProviderCall() {
-        assertThrows(IllegalArgumentException.class, () -> service.getEffectiveMenu(0L));
+	@Test
+	void getEffectiveMenu_rejectsZeroOutletIdBeforeProviderCall() {
+		assertThrows(IllegalArgumentException.class, () -> service.getEffectiveMenu(0L));
 
-        verifyNoInteractions(effectiveMenuDataProvider, effectiveMenuAssembler);
-    }
+		verifyNoInteractions(effectiveMenuDataProvider, effectiveMenuAssembler);
+	}
 
-    @Test
-    void getEffectiveMenu_whenOutletIsMissing_throwsNotFound() {
-        when(effectiveMenuDataProvider.findByOutletId(OUTLET_ID)).thenReturn(Optional.empty());
+	@Test
+	void getEffectiveMenu_whenOutletIsMissing_throwsNotFound() {
+		when(effectiveMenuDataProvider.findByOutletId(OUTLET_ID)).thenReturn(Optional.empty());
 
-        assertThrows(OutletNotFoundException.class, () -> service.getEffectiveMenu(OUTLET_ID));
+		assertThrows(OutletNotFoundException.class, () -> service.getEffectiveMenu(OUTLET_ID));
 
-        verify(effectiveMenuDataProvider).findByOutletId(OUTLET_ID);
-        verifyNoInteractions(effectiveMenuAssembler);
-    }
+		verify(effectiveMenuDataProvider).findByOutletId(OUTLET_ID);
+		verifyNoInteractions(effectiveMenuAssembler);
+	}
 
-    @Test
-    void getEffectiveMenu_whenOutletIsDraft_throwsNotFoundWithoutAssembling() {
-        when(effectiveMenuDataProvider.findByOutletId(OUTLET_ID))
-                .thenReturn(Optional.of(sourceData(ChainStatus.DRAFT)));
+	@Test
+	void getEffectiveMenu_whenOutletIsDraft_throwsNotFoundWithoutAssembling() {
+		when(effectiveMenuDataProvider.findByOutletId(OUTLET_ID))
+				.thenReturn(Optional.of(sourceData(ChainStatus.DRAFT)));
 
-        assertThrows(OutletNotFoundException.class, () -> service.getEffectiveMenu(OUTLET_ID));
+		assertThrows(OutletNotFoundException.class, () -> service.getEffectiveMenu(OUTLET_ID));
 
-        verify(effectiveMenuDataProvider).findByOutletId(OUTLET_ID);
-        verifyNoInteractions(effectiveMenuAssembler);
-    }
+		verify(effectiveMenuDataProvider).findByOutletId(OUTLET_ID);
+		verifyNoInteractions(effectiveMenuAssembler);
+	}
 
-    @Test
-    void getEffectiveMenu_whenOutletIsArchived_throwsNotFoundWithoutAssembling() {
-        when(effectiveMenuDataProvider.findByOutletId(OUTLET_ID))
-                .thenReturn(Optional.of(sourceData(ChainStatus.ARCHIVED)));
+	@Test
+	void getEffectiveMenu_whenOutletIsArchived_throwsNotFoundWithoutAssembling() {
+		when(effectiveMenuDataProvider.findByOutletId(OUTLET_ID))
+				.thenReturn(Optional.of(sourceData(ChainStatus.ARCHIVED)));
 
-        assertThrows(OutletNotFoundException.class, () -> service.getEffectiveMenu(OUTLET_ID));
+		assertThrows(OutletNotFoundException.class, () -> service.getEffectiveMenu(OUTLET_ID));
 
-        verify(effectiveMenuDataProvider).findByOutletId(OUTLET_ID);
-        verifyNoInteractions(effectiveMenuAssembler);
-    }
+		verify(effectiveMenuDataProvider).findByOutletId(OUTLET_ID);
+		verifyNoInteractions(effectiveMenuAssembler);
+	}
 
-    @Test
-    void getEffectiveMenu_whenOutletIsActive_assemblesAndReturnsMenu() {
-        EffectiveMenuSourceData sourceData = sourceData(ChainStatus.ACTIVE);
-        List<EffectiveMenuItem> expectedMenu = List.of(new EffectiveMenuItem(
-                101L, OUTLET_ID, "Burger", new BigDecimal("12.50"), true, true));
-        when(effectiveMenuDataProvider.findByOutletId(OUTLET_ID)).thenReturn(Optional.of(sourceData));
-        when(effectiveMenuAssembler.assemble(
-                OUTLET_ID,
-                sourceData.baseItems(),
-                sourceData.overrides(),
-                sourceData.localItems())).thenReturn(expectedMenu);
+	@Test
+	void getEffectiveMenu_whenOutletIsActive_assemblesAndReturnsMenu() {
+		EffectiveMenuSourceData sourceData = sourceData(ChainStatus.ACTIVE);
+		List<EffectiveMenuItem> expectedMenu = List
+				.of(new EffectiveMenuItem(101L, OUTLET_ID, "Burger", new BigDecimal("12.50"), true, true));
+		when(effectiveMenuDataProvider.findByOutletId(OUTLET_ID)).thenReturn(Optional.of(sourceData));
+		when(effectiveMenuAssembler.assemble(OUTLET_ID, sourceData.baseItems(), sourceData.overrides(),
+				sourceData.localItems())).thenReturn(expectedMenu);
 
-        List<EffectiveMenuItem> actualMenu = service.getEffectiveMenu(OUTLET_ID);
+		List<EffectiveMenuItem> actualMenu = service.getEffectiveMenu(OUTLET_ID);
 
-        assertEquals(expectedMenu, actualMenu);
-        verify(effectiveMenuDataProvider).findByOutletId(OUTLET_ID);
-        verify(effectiveMenuAssembler).assemble(
-                OUTLET_ID,
-                sourceData.baseItems(),
-                sourceData.overrides(),
-                sourceData.localItems());
-    }
+		assertEquals(expectedMenu, actualMenu);
+		verify(effectiveMenuDataProvider).findByOutletId(OUTLET_ID);
+		verify(effectiveMenuAssembler).assemble(OUTLET_ID, sourceData.baseItems(), sourceData.overrides(),
+				sourceData.localItems());
+	}
 
-    private EffectiveMenuSourceData sourceData(ChainStatus outletStatus) {
-        return new EffectiveMenuSourceData(
-                OUTLET_ID,
-                outletStatus,
-                List.of(new BaseMenuItemSnapshot(
-                        101L, "Burger", new BigDecimal("10.00"), true, true, MenuItemStatus.ACTIVE)),
-                List.of(new OutletOverrideSnapshot(101L, OUTLET_ID, new BigDecimal("12.50"), null, null)),
-                List.of(new OutletLocalMenuItemSnapshot(
-                        301L, OUTLET_ID, "Berlin Special", new BigDecimal("9.00"), true, true,
-                        MenuItemStatus.ACTIVE)));
-    }
+	private EffectiveMenuSourceData sourceData(ChainStatus outletStatus) {
+		return new EffectiveMenuSourceData(OUTLET_ID, outletStatus,
+				List.of(new BaseMenuItemSnapshot(101L, "Burger", new BigDecimal("10.00"), true, true,
+						MenuItemStatus.ACTIVE)),
+				List.of(new OutletOverrideSnapshot(101L, OUTLET_ID, new BigDecimal("12.50"), null, null)),
+				List.of(new OutletLocalMenuItemSnapshot(301L, OUTLET_ID, "Berlin Special", new BigDecimal("9.00"), true,
+						true, MenuItemStatus.ACTIVE)));
+	}
 }

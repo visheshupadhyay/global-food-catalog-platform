@@ -31,162 +31,143 @@ import com.vishesh.foodcatalog.catalog.event.domain.OutboxEventType;
 @ExtendWith(MockitoExtension.class)
 class OutboxEventReplayServiceTest {
 
-    @Mock
-    private OutboxEventRepository repository;
+	@Mock
+	private OutboxEventRepository repository;
 
-    private OutboxEventReplayService service;
+	private OutboxEventReplayService service;
 
-    @BeforeEach
-    void setUp() {
-        service = new OutboxEventReplayService(repository);
-    }
+	@BeforeEach
+	void setUp() {
+		service = new OutboxEventReplayService(repository);
+	}
 
-    @Test
-    void replay_withNullEventId_rejectsRequestWithoutRepositoryCall() {
-        assertThrows(IllegalArgumentException.class, () -> service.replay(null));
+	@Test
+	void replay_withNullEventId_rejectsRequestWithoutRepositoryCall() {
+		assertThrows(IllegalArgumentException.class, () -> service.replay(null));
 
-        verifyNoInteractions(repository);
-    }
+		verifyNoInteractions(repository);
+	}
 
-    @Test
-    void replay_whenOriginalEventIsMissing_throwsNotFoundAndDoesNotSave() {
-        UUID eventId = UUID.randomUUID();
-        when(repository.findByEventId(eventId)).thenReturn(Optional.empty());
+	@Test
+	void replay_whenOriginalEventIsMissing_throwsNotFoundAndDoesNotSave() {
+		UUID eventId = UUID.randomUUID();
+		when(repository.findByEventId(eventId)).thenReturn(Optional.empty());
 
-        assertThrows(OutboxEventNotFoundException.class, () -> service.replay(eventId));
+		assertThrows(OutboxEventNotFoundException.class, () -> service.replay(eventId));
 
-        verify(repository).findByEventId(eventId);
-        verify(repository, never()).save(any());
-    }
+		verify(repository).findByEventId(eventId);
+		verify(repository, never()).save(any());
+	}
 
-    @Test
-    void replay_createsNewPendingEventWithOriginalEventReference() {
-        OutboxEvent original = existingFailedEvent();
-        when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
-        when(repository.save(any(OutboxEvent.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+	@Test
+	void replay_createsNewPendingEventWithOriginalEventReference() {
+		OutboxEvent original = existingFailedEvent();
+		when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
+		when(repository.save(any(OutboxEvent.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        OutboxEvent replay = service.replay(original.getEventId());
+		OutboxEvent replay = service.replay(original.getEventId());
 
-        assertNotNull(replay);
-        assertNotEquals(original.getEventId(), replay.getEventId());
-        assertEquals(original.getEventId(), replay.getOriginalEventId());
-        assertEquals(OutboxEventStatus.PENDING, replay.getStatus());
-        assertEquals(0L, replay.getRetryCount());
-        assertNull(replay.getId());
-        assertNotNull(replay.getCreatedTimestamp());
-    }
+		assertNotNull(replay);
+		assertNotEquals(original.getEventId(), replay.getEventId());
+		assertEquals(original.getEventId(), replay.getOriginalEventId());
+		assertEquals(OutboxEventStatus.PENDING, replay.getStatus());
+		assertEquals(0L, replay.getRetryCount());
+		assertNull(replay.getId());
+		assertNotNull(replay.getCreatedTimestamp());
+	}
 
-    @Test
-    void replay_copiesEventAndAggregateData() {
-        OutboxEvent original = existingFailedEvent();
-        when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
-        when(repository.save(any(OutboxEvent.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+	@Test
+	void replay_copiesEventAndAggregateData() {
+		OutboxEvent original = existingFailedEvent();
+		when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
+		when(repository.save(any(OutboxEvent.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        OutboxEvent replay = service.replay(original.getEventId());
+		OutboxEvent replay = service.replay(original.getEventId());
 
-        assertEquals(original.getEventType(), replay.getEventType());
-        assertEquals(original.getKafkaKey(), replay.getKafkaKey());
-        assertEquals(original.getPayload(), replay.getPayload());
-        assertEquals(original.getAggregateId(), replay.getAggregateId());
-        assertEquals(original.getAggregateVersion(), replay.getAggregateVersion());
-    }
+		assertEquals(original.getEventType(), replay.getEventType());
+		assertEquals(original.getKafkaKey(), replay.getKafkaKey());
+		assertEquals(original.getPayload(), replay.getPayload());
+		assertEquals(original.getAggregateId(), replay.getAggregateId());
+		assertEquals(original.getAggregateVersion(), replay.getAggregateVersion());
+	}
 
-    @Test
-    void replay_clearsPreviousDeliveryFailureState() {
-        OutboxEvent original = existingFailedEvent();
-        when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
-        when(repository.save(any(OutboxEvent.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+	@Test
+	void replay_clearsPreviousDeliveryFailureState() {
+		OutboxEvent original = existingFailedEvent();
+		when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
+		when(repository.save(any(OutboxEvent.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        OutboxEvent replay = service.replay(original.getEventId());
+		OutboxEvent replay = service.replay(original.getEventId());
 
-        assertNull(replay.getNextRetryTime());
-        assertNull(replay.getLastErrorMessage());
-        assertNull(replay.getPublishedTimestamp());
-        assertNull(replay.getFailedTimestamp());
-    }
+		assertNull(replay.getNextRetryTime());
+		assertNull(replay.getLastErrorMessage());
+		assertNull(replay.getPublishedTimestamp());
+		assertNull(replay.getFailedTimestamp());
+	}
 
-    @Test
-    void replay_doesNotChangeOriginalEvent() {
-        OutboxEvent original = existingFailedEvent();
-        when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
-        when(repository.save(any(OutboxEvent.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+	@Test
+	void replay_doesNotChangeOriginalEvent() {
+		OutboxEvent original = existingFailedEvent();
+		when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
+		when(repository.save(any(OutboxEvent.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.replay(original.getEventId());
+		service.replay(original.getEventId());
 
-        assertEquals(OutboxEventStatus.FAILED, original.getStatus());
-        assertEquals(2L, original.getRetryCount());
-        assertEquals("broker unavailable", original.getLastErrorMessage());
-    }
+		assertEquals(OutboxEventStatus.FAILED, original.getStatus());
+		assertEquals(2L, original.getRetryCount());
+		assertEquals("broker unavailable", original.getLastErrorMessage());
+	}
 
-    @Test
-    void replay_loadsOriginalBeforeSavingReplay() {
-        OutboxEvent original = existingFailedEvent();
-        when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
-        when(repository.save(any(OutboxEvent.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+	@Test
+	void replay_loadsOriginalBeforeSavingReplay() {
+		OutboxEvent original = existingFailedEvent();
+		when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
+		when(repository.save(any(OutboxEvent.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.replay(original.getEventId());
+		service.replay(original.getEventId());
 
-        InOrder order = inOrder(repository);
-        order.verify(repository).findByEventId(original.getEventId());
-        order.verify(repository).save(any(OutboxEvent.class));
-    }
+		InOrder order = inOrder(repository);
+		order.verify(repository).findByEventId(original.getEventId());
+		order.verify(repository).save(any(OutboxEvent.class));
+	}
 
-    @Test
-    void replay_savesTheNewEvent() {
-        OutboxEvent original = existingFailedEvent();
-        when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
-        when(repository.save(any(OutboxEvent.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+	@Test
+	void replay_savesTheNewEvent() {
+		OutboxEvent original = existingFailedEvent();
+		when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
+		when(repository.save(any(OutboxEvent.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.replay(original.getEventId());
+		service.replay(original.getEventId());
 
-        ArgumentCaptor<OutboxEvent> captor = ArgumentCaptor.forClass(OutboxEvent.class);
-        verify(repository).save(captor.capture());
-        assertEquals(OutboxEventStatus.PENDING, captor.getValue().getStatus());
-    }
+		ArgumentCaptor<OutboxEvent> captor = ArgumentCaptor.forClass(OutboxEvent.class);
+		verify(repository).save(captor.capture());
+		assertEquals(OutboxEventStatus.PENDING, captor.getValue().getStatus());
+	}
 
-    @Test
-    void replay_dlqEvent_createsFreshPendingAttemptWithoutChangingDlqRecord() {
-        OutboxEvent original = eventWithStatus(OutboxEventStatus.DLQ);
-        when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
-        when(repository.save(any(OutboxEvent.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+	@Test
+	void replay_dlqEvent_createsFreshPendingAttemptWithoutChangingDlqRecord() {
+		OutboxEvent original = eventWithStatus(OutboxEventStatus.DLQ);
+		when(repository.findByEventId(original.getEventId())).thenReturn(Optional.of(original));
+		when(repository.save(any(OutboxEvent.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        OutboxEvent replay = service.replay(original.getEventId());
+		OutboxEvent replay = service.replay(original.getEventId());
 
-        assertNotEquals(original.getEventId(), replay.getEventId());
-        assertEquals(original.getEventId(), replay.getOriginalEventId());
-        assertEquals(OutboxEventStatus.PENDING, replay.getStatus());
-        assertEquals(0L, replay.getRetryCount());
-        assertEquals(OutboxEventStatus.DLQ, original.getStatus());
-        assertEquals(2L, original.getRetryCount());
-    }
+		assertNotEquals(original.getEventId(), replay.getEventId());
+		assertEquals(original.getEventId(), replay.getOriginalEventId());
+		assertEquals(OutboxEventStatus.PENDING, replay.getStatus());
+		assertEquals(0L, replay.getRetryCount());
+		assertEquals(OutboxEventStatus.DLQ, original.getStatus());
+		assertEquals(2L, original.getRetryCount());
+	}
 
-    private OutboxEvent existingFailedEvent() {
-        return eventWithStatus(OutboxEventStatus.FAILED);
-    }
+	private OutboxEvent existingFailedEvent() {
+		return eventWithStatus(OutboxEventStatus.FAILED);
+	}
 
-    private OutboxEvent eventWithStatus(OutboxEventStatus status) {
-        return new OutboxEvent(
-                55L,
-                UUID.randomUUID(),
-                null,
-                OutboxEventType.MENU_ITEM_CHANGED,
-                "101",
-                "{\"itemId\":101,\"price\":12.50}",
-                status,
-                2L,
-                Instant.parse("2026-01-01T10:00:00Z"),
-                "broker unavailable",
-                Instant.parse("2026-01-01T09:00:00Z"),
-                null,
-                Instant.parse("2026-01-01T09:30:00Z"),
-                101L,
-                4L);
-    }
+	private OutboxEvent eventWithStatus(OutboxEventStatus status) {
+		return new OutboxEvent(55L, UUID.randomUUID(), null, OutboxEventType.MENU_ITEM_CHANGED, "101",
+				"{\"itemId\":101,\"price\":12.50}", status, 2L, Instant.parse("2026-01-01T10:00:00Z"),
+				"broker unavailable", Instant.parse("2026-01-01T09:00:00Z"), null,
+				Instant.parse("2026-01-01T09:30:00Z"), 101L, 4L);
+	}
 }

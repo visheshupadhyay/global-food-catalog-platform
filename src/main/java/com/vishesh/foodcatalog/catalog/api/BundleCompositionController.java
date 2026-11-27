@@ -16,56 +16,39 @@ import jakarta.validation.Valid;
 
 /**
  * HTTP entry point for replacing a bundle's complete direct-child list.
- * Validation of ownership, cycles, persistence, and outbox delivery belongs
- * to the application service, not this HTTP adapter.
+ * Validation of ownership, cycles, persistence, and outbox delivery belongs to
+ * the application service, not this HTTP adapter.
  */
 @RestController
 @RequestMapping("/api/v1/restaurant-chains/{restaurantChainId}/menu-items/{bundleMenuItemId}/bundle-children")
 public class BundleCompositionController {
-    private final BundleCompositionService service;
+	private final BundleCompositionService service;
 
-    public BundleCompositionController(BundleCompositionService service) {
-        this.service = service;
-    }
+	public BundleCompositionController(BundleCompositionService service) {
+		this.service = service;
+	}
 
-    @GetMapping
-    public ResponseEntity<BundleCompositionResponse> getChildren(
-            @PathVariable Long restaurantChainId,
-            @PathVariable Long bundleMenuItemId) {
+	@GetMapping
+	public ResponseEntity<BundleCompositionResponse> getChildren(@PathVariable Long restaurantChainId,
+			@PathVariable Long bundleMenuItemId) {
 
-        return ResponseEntity.ok(toResponse(service.getComposition(bundleMenuItemId, restaurantChainId)));
-    }
+		return ResponseEntity.ok(toResponse(service.getComposition(bundleMenuItemId, restaurantChainId)));
+	}
 
-    @PutMapping
-    public ResponseEntity<BundleCompositionResponse> replaceChildren(
-            @PathVariable Long restaurantChainId,
-            @PathVariable Long bundleMenuItemId,
-            @Valid @RequestBody ReplaceBundleChildrenRequest request) {
+	@PutMapping
+	public ResponseEntity<BundleCompositionResponse> replaceChildren(@PathVariable Long restaurantChainId,
+			@PathVariable Long bundleMenuItemId, @Valid @RequestBody ReplaceBundleChildrenRequest request) {
 
-        BundleCompositionResult result = service.replaceChildrenWithResult(
-                bundleMenuItemId,
-                restaurantChainId,
-                request.expectedVersion(),
-                request.children().stream()
-                        .map(child -> new BundleChild(
-                                bundleMenuItemId,
-                                child.childMenuItemId(),
-                                child.quantity(),
-                                child.displayOrder()))
-                        .toList());
+		BundleCompositionResult result = service.replaceChildrenWithResult(bundleMenuItemId, restaurantChainId,
+				request.expectedVersion(), request.children().stream().map(child -> new BundleChild(bundleMenuItemId,
+						child.childMenuItemId(), child.quantity(), child.displayOrder())).toList());
 
-        return ResponseEntity.ok(toResponse(result));
-    }
+		return ResponseEntity.ok(toResponse(result));
+	}
 
-    private BundleCompositionResponse toResponse(BundleCompositionResult result) {
-        return new BundleCompositionResponse(
-                result.bundleMenuItemId(),
-                result.bundleVersion(),
-                result.children().stream()
-                        .map(child -> new BundleChildResponse(
-                                child.getChildMenuItemId(),
-                                child.getQuantity(),
-                                child.getDisplayOrder()))
-                        .toList());
-    }
+	private BundleCompositionResponse toResponse(BundleCompositionResult result) {
+		return new BundleCompositionResponse(result.bundleMenuItemId(), result.bundleVersion(),
+				result.children().stream().map(child -> new BundleChildResponse(child.getChildMenuItemId(),
+						child.getQuantity(), child.getDisplayOrder())).toList());
+	}
 }

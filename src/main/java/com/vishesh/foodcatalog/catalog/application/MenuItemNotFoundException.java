@@ -5,8 +5,8 @@ package com.vishesh.foodcatalog.catalog.application;
  */
 public class MenuItemNotFoundException extends RuntimeException {
 
-    public MenuItemNotFoundException(String message) {
-        super(message);
-    }
+	public MenuItemNotFoundException(String message) {
+		super(message);
+	}
 
 }

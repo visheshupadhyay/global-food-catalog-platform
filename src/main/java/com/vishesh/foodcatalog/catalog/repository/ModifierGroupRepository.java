@@ -7,11 +7,11 @@ import com.vishesh.foodcatalog.catalog.domain.ModifierGroup;
 
 /** Port for modifier groups owned by a product or bundle. */
 public interface ModifierGroupRepository {
-    ModifierGroup save(ModifierGroup group);
+	ModifierGroup save(ModifierGroup group);
 
-    Optional<ModifierGroup> findById(Long id);
+	Optional<ModifierGroup> findById(Long id);
 
-    List<ModifierGroup> findByOwnerMenuItemId(Long ownerMenuItemId);
+	List<ModifierGroup> findByOwnerMenuItemId(Long ownerMenuItemId);
 
-    void deleteById(Long groupId);
+	void deleteById(Long groupId);
 }
